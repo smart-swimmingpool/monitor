@@ -1,10 +1,9 @@
 ---
-linktitle: Monitor
+linktitle: Pool Monitor
 summary: Monitor the temperature of your swimming pool
-weight: 10
 
 # page metadata.
-title: Monitor
+title: Pool Monitor
 date: "2020-05-28"
 lastmod: "2020-06-02"
 draft: false
