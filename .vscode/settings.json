@@ -1,0 +1,58 @@
+{
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\Stephan\\.platformio\\penv\\Scripts;C:\\Users\\Stephan\\.platformio\\penv;C:\\ProgramData\\Oracle\\Java\\javapath;Z:\\Python27\\;Z:\\Python27\\Scripts;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\DATA\\;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Windows Live\\Shared;C:\\php;C:\\ProgramData\\ComposerSetup\\bin;C:\\Program Files\\nodejs\\;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Skype\\Phone\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\Microsoft VS Code Insiders\\bin;C:\\Ruby200-x64\\bin;C:\\Users\\Stephan\\AppData\\Roaming\\npm;C:\\Users\\Stephan\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\Microsoft VS Code Insiders\\bin;;C:\\Users\\Stephan\\AppData\\Local\\hyper\\app-2.1.0-canary1\\resources\\bin;C:\\Users\\Stephan\\AppData\\Local\\Programs\\Microsoft VS Code Insiders\\bin;C:\\ProgramData\\Oracle\\Java\\javapath;Z:\\Python27\\;Z:\\Python27\\Scripts;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\DATA\\;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Windows Live\\Shared;C:\\php;C:\\ProgramData\\ComposerSetup\\bin;C:\\Program Files\\nodejs\\;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Skype\\Phone\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\Microsoft VS Code Insiders\\bin;C:\\Ruby200-x64\\bin;C:\\Users\\Stephan\\AppData\\Roaming\\npm;C:\\Users\\Stephan\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\Microsoft VS Code Insiders\\bin;;C:\\Users\\Stephan\\AppData\\Local\\hyper\\app-2.1.0-canary1\\resources\\bin;C:\\Users\\Stephan\\AppData\\Local\\Programs\\Microsoft VS Code Insiders\\bin",
+        "PLATFORMIO_CALLER": "vscode"
+    },
+    "MicroPython.executeButton": [
+        {
+            "text": "▶",
+            "tooltip": "Run",
+            "alignment": "left",
+            "command": "extension.executeFile",
+            "priority": 3.5
+        }
+    ],
+    "python.autoComplete.extraPaths": [
+        "c:/Users/ssr/.vscode-insiders/extensions/rt-thread.rt-thread-micropython-1.0.7/mpy-snippets/code-completion"
+    ],
+    "MicroPython.syncButton": [
+        {
+            "text": "$(sync)",
+            "tooltip": "sync",
+            "alignment": "left",
+            "command": "extension.execute",
+            "priority": 4
+        }
+    ],
+    "deepscan.enable": true,
+    "python.linting.pylintArgs": [
+        "--init-hook",
+        "import sys; sys.path.append('c:/Users/ssr/.vscode-insiders/extensions/rt-thread.rt-thread-micropython-1.0.7/mpy-snippets/code-completion')"
+    ],
+    "files.associations": {
+        "*.ejs": "html",
+        "array": "cpp",
+        "atomic": "cpp",
+        "*.tcc": "cpp",
+        "cstddef": "cpp",
+        "cstdio": "cpp",
+        "cstring": "cpp",
+        "cwchar": "cpp",
+        "vector": "cpp",
+        "functional": "cpp",
+        "memory": "cpp",
+        "memory_resource": "cpp",
+        "optional": "cpp",
+        "string_view": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "random": "cpp",
+        "fstream": "cpp",
+        "initializer_list": "cpp",
+        "new": "cpp",
+        "stdexcept": "cpp",
+        "system_error": "cpp",
+        "typeinfo": "cpp",
+        "utility": "cpp"
+    }
+}
