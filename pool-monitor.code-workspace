@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "Pool-Monitor-e-ink",
+			"path": "..\\Pool-Monitor-e-ink"
+		}
+	],
+	"settings": {
+		"terminal.integrated.env.windows": {
+			"PATH": "C:\\Users\\Stephan\\.platformio\\penv\\Scripts;C:\\Users\\Stephan\\.platformio\\penv;C:\\ProgramData\\Oracle\\Java\\javapath;Z:\\Python27\\;Z:\\Python27\\Scripts;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\DATA\\;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Windows Live\\Shared;C:\\php;C:\\ProgramData\\ComposerSetup\\bin;C:\\Program Files\\nodejs\\;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Skype\\Phone\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\Microsoft VS Code Insiders\\bin;C:\\Ruby200-x64\\bin;C:\\Users\\Stephan\\AppData\\Roaming\\npm;C:\\Users\\Stephan\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\Microsoft VS Code Insiders\\bin;;C:\\Users\\Stephan\\AppData\\Local\\hyper\\app-2.1.0-canary1\\resources\\bin;C:\\Users\\Stephan\\AppData\\Local\\Programs\\Microsoft VS Code Insiders\\bin;C:\\ProgramData\\Oracle\\Java\\javapath;Z:\\Python27\\;Z:\\Python27\\Scripts;C:\\Program Files (x86)\\NVIDIA Corporation\\PhysX\\Common;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\;C:\\Program Files (x86)\\Business Objects\\Common\\3.5\\bin\\NOTES\\DATA\\;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\Windows Live\\Shared;C:\\php;C:\\ProgramData\\ComposerSetup\\bin;C:\\Program Files\\nodejs\\;C:\\Program Files\\Git\\cmd;C:\\Program Files (x86)\\Skype\\Phone\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Program Files\\Microsoft VS Code Insiders\\bin;C:\\Ruby200-x64\\bin;C:\\Users\\Stephan\\AppData\\Roaming\\npm;C:\\Users\\Stephan\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Program Files\\Microsoft VS Code Insiders\\bin;;C:\\Users\\Stephan\\AppData\\Local\\hyper\\app-2.1.0-canary1\\resources\\bin;C:\\Users\\Stephan\\AppData\\Local\\Programs\\Microsoft VS Code Insiders\\bin",
+			"PLATFORMIO_CALLER": "vscode"
+		},
+		"deepscan.enable": true,
+		"files.associations": {
+			"*.ejs": "html",
+			"ios": "cpp",
+			"*.tcc": "cpp"
+		}
+	}
+}

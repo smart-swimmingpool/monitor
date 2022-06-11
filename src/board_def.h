@@ -10,7 +10,7 @@
 #define TTGO_T5_2_8 0  //! Silk screen marking T5_V28_27
 */
 
-#if (LILYGO_T5_V213)
+#if (LILYGO_T5_V231)
 
 //#include <GxGDE0213B72B/GxGDE0213B72B.h> // 2.13" b/w
 #include <GxDEPG0213BN/GxDEPG0213BN.h>  // 2.13" b/w newer panel

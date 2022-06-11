@@ -65,17 +65,17 @@ void initDisplay() {
   u8g2_for_adafruit_gfx.setBackgroundColor(1);
 
   u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
-  u8g2_for_adafruit_gfx.drawGlyph(4, 45, 0x02a6); /* hex pool */
+  u8g2_for_adafruit_gfx.drawGlyph(4, 50, 0x02a6); /* hex pool */
   display.setFont(&FreeSans12pt7b);
-  displayText("     Pool:", 45, GxEPD_ALIGN_LEFT);
+  displayText("     Pool:", 50, GxEPD_ALIGN_LEFT);
 
   u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_ecology_t);
-  u8g2_for_adafruit_gfx.drawGlyph(4, 90, 0x003E); /* hex 3E solar panel */
+  u8g2_for_adafruit_gfx.drawGlyph(4, 94, 0x003E); /* hex 3E solar panel */
   display.setFont(&FreeSans12pt7b);
-  displayText("     Solar:", 90, GxEPD_ALIGN_LEFT);
+  displayText("     Solar:", 94, GxEPD_ALIGN_LEFT);
 
-  display.drawLine(0, 100, display.width(), 100, GxEPD_BLACK);
-  display.drawLine(0, 101, display.width(), 101, GxEPD_BLACK);
+  display.drawLine(0, 102, display.width(), 102, GxEPD_BLACK);
+  display.drawLine(0, 103, display.width(), 103, GxEPD_BLACK);
   display.setFont(&FreeSans9pt7b);
   displayText("www.smart-swimmingpool.com", 117, GxEPD_ALIGN_LEFT);
 
@@ -88,7 +88,7 @@ void updateDisplay() {
   const int16_t UPDATE_AREA_X = 90;
   const int16_t UPDATE_AREA_Y = 0;
   const int16_t UPDATE_AREA_WIDTH = display.width() - UPDATE_AREA_X;
-  const int16_t UPDATE_AREA_HEIGHT = 99;
+  const int16_t UPDATE_AREA_HEIGHT = 95;
 
   char buffer[50];
 
@@ -103,10 +103,11 @@ void updateDisplay() {
 
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeSansBold24pt7b);
-
-  sprintf(buffer, "%2.1f\xB0"" C", preferences.getFloat("pool_temp", 0.0));
-  displayText(buffer, 48, GxEPD_ALIGN_RIGHT);
-  display.drawCircle(display.width() - 35, 18, 4, GxEPD_BLACK);
+  sprintf(buffer, "%2.1f C", preferences.getFloat("pool_temp", 0.0));
+  displayText(buffer, 50, GxEPD_ALIGN_RIGHT);
+  display.drawCircle(display.width() - 35, 20, 5, GxEPD_BLACK);
+  display.drawCircle(display.width() - 35, 20, 4, GxEPD_BLACK);
+  display.drawCircle(display.width() - 35, 20, 3, GxEPD_BLACK);
 
   if(preferences.getBool("pump_pool", false)) {
     u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
@@ -117,15 +118,17 @@ void updateDisplay() {
 
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeSansBold24pt7b);
-  sprintf(buffer, "%2.1f\xB0"" C", preferences.getFloat("solar_temp", 0.0));
-  displayText(buffer, 90, GxEPD_ALIGN_RIGHT);
-  display.drawCircle(display.width() - 35, 60, 4, GxEPD_BLACK);
+  sprintf(buffer, "%2.1f C", preferences.getFloat("solar_temp", 0.0));
+  displayText(buffer, 94, GxEPD_ALIGN_RIGHT);
+  display.drawCircle(display.width() - 35, 64, 5, GxEPD_BLACK);
+  display.drawCircle(display.width() - 35, 64, 4, GxEPD_BLACK);
+  display.drawCircle(display.width() - 35, 64, 3, GxEPD_BLACK);
 
   if(preferences.getBool("pump_solar", false)) {
     u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
-    u8g2_for_adafruit_gfx.drawGlyph(95 , 90, 0x01ec); /* run circle */
+    u8g2_for_adafruit_gfx.drawGlyph(95 , 94, 0x01ec); /* run circle */
   } else {
-    display.fillRect(95, 90 -5, 8, 8, GxEPD_WHITE);
+    display.fillRect(95, 94 -5, 8, 8, GxEPD_WHITE);
   }
 
   display.updateWindow(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH - 1, UPDATE_AREA_HEIGHT - 1, true);
@@ -159,30 +162,28 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
 
   } else if(command.endsWith("/pool-temp/temperature")) {
 
-    Serial.println("🏊🏼🌡️  Pool temperature: " + payloadString);
+    Serial.println("\tPool temperature: " + payloadString);
     preferences.putFloat("pool_temp", payloadString.toFloat());
 
   } else if(command.endsWith("/solar-temp/temperature")) {
 
-    Serial.println("🌞🌡️\tSolar temperature: " + payloadString);
+    Serial.println("\tSolar temperature: " + payloadString);
     preferences.putFloat("solar_temp", payloadString.toFloat());
 
   } else if(command.endsWith("/pool-pump/switch")) {
-    Serial.println("⚙️💧\tPool pump: " + payloadString);
+    Serial.println("\tPool pump: " + payloadString);
     preferences.putBool("pump_pool", (payloadString == "true" ? true : false));
 
   } else if(command.endsWith("/solar-pump/switch")) {
-    Serial.println("⚙️☀️\tSolar pump: " + payloadString);
+    Serial.println("\tSolar pump: " + payloadString);
     preferences.putBool("pump_solar", (payloadString == "true" ? true : false));
 
   } else if(command.endsWith("/operation-mode/mode")) {
-    Serial.println("Operation Mode: " + payloadString);
+    Serial.println("\tOperation Mode: " + payloadString);
     preferences.putString("pool_mode", payloadString);
   } else {
     // Serial.println("Unmanaged mqtt message: " + command);
   }
-
-  // updateDisplay();
 }
 
 /**
@@ -381,7 +382,7 @@ void setup() {
     delay(10);
   }
 
-  Serial.printf("😴 Going to sleep now for %d sec.\n", (TIME_TO_SLEEP_SECONDS));
+  Serial.printf("😴\tGoing to sleep now for %d sec.\n", (TIME_TO_SLEEP_SECONDS));
 
   WiFi.disconnect(true);  // Disconnect from the network
   delay( 1 );
@@ -389,6 +390,7 @@ void setup() {
   delay( 1 );
 
   updateDisplay();
+  delay(3000); // Wait for the display to update
   display.powerDown();
 
   // Close the Preferences
