@@ -3,7 +3,7 @@ title: Users Guide of Pool Controller
 summary: Control your Smart Swimming Pool smart
 date: "2022-06-11"
 lastmod: "2022-06-11"
-draft: true
+draft: false
 toc: true
 type: docs
 featured: true
