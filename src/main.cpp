@@ -11,9 +11,6 @@
 */
 
 #include <Arduino.h>
-
-#include <PubSubClient.h>
-#include <ArduinoJson.h>
 #include <PubSubClient.h>
 #include <Wire.h>
 #include <WiFi.h>

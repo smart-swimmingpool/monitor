@@ -2,10 +2,6 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"name": "Pool-Monitor-e-ink",
-			"path": "..\\Pool-Monitor-e-ink"
 		}
 	],
 	"settings": {
