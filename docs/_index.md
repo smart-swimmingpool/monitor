@@ -16,8 +16,8 @@ tags: ["docs", "esp32", "tutorial"]
 menu:
   docs:
     parent: Pool Monitor
-    name: Monitor
-    weight: 30
+    name: Overview
+    weight: 10
 ---
 
 <span style="text-shadow: none;">
