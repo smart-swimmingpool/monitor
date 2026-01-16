@@ -166,15 +166,12 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
       Serial.println("🏊🏼\tPool Controller found using id " + device_id);
       preferences.putString("device_id", device_id);
 
-      // Pre-allocate String buffer to reduce heap fragmentation
-      // (still uses += for concatenation, but with reserved space)
-      String pool_controller;
-      pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
-      pool_controller = "homie/";
-      pool_controller += device_id;
-      pool_controller += "/#";
-      mqttClient.subscribe(pool_controller.c_str());
-      Serial.println("🏊🏼\tSubscribed to: " + pool_controller);
+      // Use snprintf for safer string construction
+      char pool_controller[MQTT_TOPIC_BUFFER_SIZE];
+      snprintf(pool_controller, sizeof(pool_controller), "homie/%s/#", device_id.c_str());
+      mqttClient.subscribe(pool_controller);
+      Serial.print("🏊🏼\tSubscribed to: ");
+      Serial.println(pool_controller);
 
       mqttClient.unsubscribe("homie/+/$name"); //no longer required to search.
     }
@@ -219,12 +216,10 @@ void connectMQTT(IPAddress ip) {
     String device_id = preferences.getString("device_id");
 
     if(device_id.length() > 0) {
-      String pool_controller;
-      pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
-      pool_controller = "homie/";
-      pool_controller += device_id;
-      pool_controller += "/#";
-      mqttClient.subscribe(pool_controller.c_str());
+      // Use snprintf for safer string construction
+      char pool_controller[MQTT_TOPIC_BUFFER_SIZE];
+      snprintf(pool_controller, sizeof(pool_controller), "homie/%s/#", device_id.c_str());
+      mqttClient.subscribe(pool_controller);
     } else {
       Serial.println("🏊🏼\tConnected to MQTT server searching device");
       mqttClient.subscribe("homie/+/$name");
