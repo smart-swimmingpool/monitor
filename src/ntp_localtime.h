@@ -54,7 +54,7 @@ static int getHourOfDay() {
   
   if (retries >= MAX_RETRIES) {
     Serial.println("⚠️\tFailed to update NTP time");
-    return -1;
+    return 255; // Invalid hour value to indicate error (valid range is 0-23)
   }
   
   time_t t = currentTZ.toLocal(timeClient.getEpochTime());

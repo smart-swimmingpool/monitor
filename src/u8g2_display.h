@@ -42,7 +42,7 @@ U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx;
  * @param align
  * @param offset
  */
-static void displayText(const char* str, const int16_t y, const uint8_t align, const int16_t offset = 0) {
+static void displayText(const char* str, int16_t y, uint8_t align, int16_t offset = 0) {
   int16_t  x  = 0;
   int16_t  x1 = 0, y1 = 0;
   uint16_t w = 0, h = 0;

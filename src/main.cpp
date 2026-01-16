@@ -164,8 +164,10 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putString("device_id", device_id);
 
       // Use c_str() to avoid String concatenation in sensitive code
+      // Reserve space: "homie/" (6) + device_id + "/#" (2) + margin
+      const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
       String pool_controller;
-      pool_controller.reserve(50); // Pre-allocate to avoid heap fragmentation
+      pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
       pool_controller = "homie/";
       pool_controller += device_id;
       pool_controller += "/#";
@@ -215,8 +217,10 @@ void connectMQTT(IPAddress ip) {
     String device_id = preferences.getString("device_id");
 
     if(device_id.length() > 0) {
+      // Reserve space: "homie/" (6) + device_id + "/#" (2) + margin
+      const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
       String pool_controller;
-      pool_controller.reserve(50); // Pre-allocate to avoid heap fragmentation
+      pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
       pool_controller = "homie/";
       pool_controller += device_id;
       pool_controller += "/#";
