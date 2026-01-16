@@ -37,6 +37,8 @@ u_int16_t mqtt_server_port;
 IPAddress  remote;     // IP Address of mqtt server
 
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
+// Buffer size for MQTT topic strings: "homie/" (6) + device_id (max ~40) + "/#" (2) + margin
+const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -164,8 +166,6 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
       preferences.putString("device_id", device_id);
 
       // Use c_str() to avoid String concatenation in sensitive code
-      // Reserve space: "homie/" (6) + device_id + "/#" (2) + margin
-      const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
       String pool_controller;
       pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
       pool_controller = "homie/";
@@ -217,8 +217,6 @@ void connectMQTT(IPAddress ip) {
     String device_id = preferences.getString("device_id");
 
     if(device_id.length() > 0) {
-      // Reserve space: "homie/" (6) + device_id + "/#" (2) + margin
-      const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
       String pool_controller;
       pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
       pool_controller = "homie/";

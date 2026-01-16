@@ -8,6 +8,9 @@
 WiFiUDP   ntpUDP;
 NTPClient timeClient(ntpUDP, "europe.pool.ntp.org");
 
+// Error value for invalid hour (valid range is 0-23)
+#define INVALID_HOUR_VALUE 255
+
 // see: https://github.com/JChristensen/Timezone/blob/master/examples/WorldClock/WorldClock.ino
 // Central European Time (Frankfurt, Paris)
 TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};  // Central European Summer Time
@@ -54,7 +57,7 @@ static int getHourOfDay() {
   
   if (retries >= MAX_RETRIES) {
     Serial.println("⚠️\tFailed to update NTP time");
-    return 255; // Invalid hour value to indicate error (valid range is 0-23)
+    return INVALID_HOUR_VALUE;
   }
   
   time_t t = currentTZ.toLocal(timeClient.getEpochTime());
