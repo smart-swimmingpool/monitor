@@ -37,7 +37,7 @@ static String getCurrentTime() {
   
   time_t t = currentTZ.toLocal(timeClient.getEpochTime());
   char   buf[10];
-  sprintf(buf, "%.2d:%.2d", hour(t), minute(t));
+  snprintf(buf, sizeof(buf), "%.2d:%.2d", hour(t), minute(t));
 
   return String(buf);
 }

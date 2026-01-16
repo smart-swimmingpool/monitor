@@ -413,7 +413,6 @@ void setup() {
   if (mqttClient.connected()) {
     mqttClient.disconnect();
   }
-  mqttClient.setClient(wifiClient); // Reset client state
 
   WiFi.disconnect(true);  // Disconnect from the network
   delay( 1 );
