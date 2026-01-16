@@ -21,10 +21,20 @@ Timezone       UTC(utcRule);
 Timezone currentTZ = CE;
 
 static String getCurrentTime() {
-  // update time
-  while (!timeClient.update()) {
+  // update time with timeout to prevent infinite loop
+  int retries = 0;
+  const int MAX_RETRIES = 10;
+  while (!timeClient.update() && retries < MAX_RETRIES) {
     timeClient.forceUpdate();
+    retries++;
+    delay(100); // Small delay between retries
   }
+  
+  if (retries >= MAX_RETRIES) {
+    Serial.println("⚠️\tFailed to update NTP time");
+    return String("--:--");
+  }
+  
   time_t t = currentTZ.toLocal(timeClient.getEpochTime());
   char   buf[10];
   sprintf(buf, "%.2d:%.2d", hour(t), minute(t));
@@ -33,10 +43,20 @@ static String getCurrentTime() {
 }
 
 static int getHourOfDay() {
-  // update time
-  while (!timeClient.update()) {
+  // update time with timeout to prevent infinite loop
+  int retries = 0;
+  const int MAX_RETRIES = 10;
+  while (!timeClient.update() && retries < MAX_RETRIES) {
     timeClient.forceUpdate();
+    retries++;
+    delay(100); // Small delay between retries
   }
+  
+  if (retries >= MAX_RETRIES) {
+    Serial.println("⚠️\tFailed to update NTP time");
+    return -1;
+  }
+  
   time_t t = currentTZ.toLocal(timeClient.getEpochTime());
   return hour(t);
 }

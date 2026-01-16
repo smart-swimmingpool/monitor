@@ -87,7 +87,7 @@ void updateDisplay() {
   const int16_t UPDATE_AREA_WIDTH = display.width() - UPDATE_AREA_X;
   const int16_t UPDATE_AREA_HEIGHT = 95;
 
-  char buffer[50];
+  char buffer[50]; // Ensure buffer is large enough
 
   display.fillRect(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH, UPDATE_AREA_HEIGHT, GxEPD_WHITE);
 
@@ -100,7 +100,8 @@ void updateDisplay() {
 
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeSansBold24pt7b);
-  sprintf(buffer, "%2.1f C", preferences.getFloat("pool_temp", 0.0));
+  // Use snprintf for safer buffer handling
+  snprintf(buffer, sizeof(buffer), "%2.1f C", preferences.getFloat("pool_temp", 0.0));
   displayText(buffer, 50, GxEPD_ALIGN_RIGHT);
   display.drawCircle(display.width() - 35, 20, 5, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 20, 4, GxEPD_BLACK);
@@ -115,7 +116,8 @@ void updateDisplay() {
 
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeSansBold24pt7b);
-  sprintf(buffer, "%2.1f C", preferences.getFloat("solar_temp", 0.0));
+  // Use snprintf for safer buffer handling
+  snprintf(buffer, sizeof(buffer), "%2.1f C", preferences.getFloat("solar_temp", 0.0));
   displayText(buffer, 94, GxEPD_ALIGN_RIGHT);
   display.drawCircle(display.width() - 35, 64, 5, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 64, 4, GxEPD_BLACK);
@@ -139,8 +141,19 @@ void updateDisplay() {
  *  @brief called on MQTT message
  */
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
-  String command = String((char*) topic);
-  String payloadString = String((char*) payload).substring(0, length);
+  // Prevent memory leak: create a null-terminated copy of payload
+  char* payloadCopy = (char*)malloc(length + 1);
+  if (payloadCopy == NULL) {
+    Serial.println("⚠️\tFailed to allocate memory for MQTT payload");
+    return;
+  }
+  memcpy(payloadCopy, payload, length);
+  payloadCopy[length] = '\0';
+  
+  String command = String(topic);
+  String payloadString = String(payloadCopy);
+  free(payloadCopy);
+  
   String device_id = preferences.getString("device_id");
 
   if(command.endsWith("/$name") && device_id.length() == 0) {
@@ -150,7 +163,12 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
       Serial.println("🏊🏼\tPool Controller found using id " + device_id);
       preferences.putString("device_id", device_id);
 
-      String pool_controller = "homie/" + device_id + "/#";
+      // Use c_str() to avoid String concatenation in sensitive code
+      String pool_controller;
+      pool_controller.reserve(50); // Pre-allocate to avoid heap fragmentation
+      pool_controller = "homie/";
+      pool_controller += device_id;
+      pool_controller += "/#";
       mqttClient.subscribe(pool_controller.c_str());
       Serial.println("🏊🏼\tSubscribed to: " + pool_controller);
 
@@ -197,7 +215,11 @@ void connectMQTT(IPAddress ip) {
     String device_id = preferences.getString("device_id");
 
     if(device_id.length() > 0) {
-      String pool_controller = "homie/" + device_id + "/#";
+      String pool_controller;
+      pool_controller.reserve(50); // Pre-allocate to avoid heap fragmentation
+      pool_controller = "homie/";
+      pool_controller += device_id;
+      pool_controller += "/#";
       mqttClient.subscribe(pool_controller.c_str());
     } else {
       Serial.println("🏊🏼\tConnected to MQTT server searching device");
@@ -254,6 +276,9 @@ void showWiFiConnectionFailedScreen() {
 
   // Remove all preferences under the opened namespace
   preferences.clear();
+  
+  // Close preferences before restart to prevent corruption
+  preferences.end();
 
   ESP.restart();
 }
@@ -358,7 +383,10 @@ void setup() {
   WiFiSettings.onPortal       = []() { showSetupScreen(); };
   WiFiSettings.onSuccess      = []() { showWiFiConnectedScreen(); };
   WiFiSettings.onFailure      = []() { showWiFiConnectionFailedScreen(); };
-  WiFiSettings.onConfigSaved  = []() { ESP.restart();  }; // Reboot as soon as config is saved
+  WiFiSettings.onConfigSaved  = []() { 
+    preferences.end(); // Close preferences before restart
+    ESP.restart();  
+  }; // Reboot as soon as config is saved
 
   // Define custom settings saved by WifiSettings
   // These will return the default if nothing was set before
@@ -380,6 +408,12 @@ void setup() {
   }
 
   Serial.printf("😴\tGoing to sleep now for %d sec.\n", (TIME_TO_SLEEP_SECONDS));
+
+  // Properly disconnect MQTT client to prevent memory leak
+  if (mqttClient.connected()) {
+    mqttClient.disconnect();
+  }
+  mqttClient.setClient(wifiClient); // Reset client state
 
   WiFi.disconnect(true);  // Disconnect from the network
   delay( 1 );
