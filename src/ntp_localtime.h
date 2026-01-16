@@ -30,7 +30,7 @@ static String getCurrentTime() {
   while (!timeClient.update() && retries < MAX_RETRIES) {
     timeClient.forceUpdate();
     retries++;
-    delay(100); // Small delay between retries
+    delay(500); // Delay between retries for network operations
   }
   
   if (retries >= MAX_RETRIES) {
@@ -52,7 +52,7 @@ static int getHourOfDay() {
   while (!timeClient.update() && retries < MAX_RETRIES) {
     timeClient.forceUpdate();
     retries++;
-    delay(100); // Small delay between retries
+    delay(500); // Delay between retries for network operations
   }
   
   if (retries >= MAX_RETRIES) {

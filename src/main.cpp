@@ -89,7 +89,8 @@ void updateDisplay() {
   const int16_t UPDATE_AREA_WIDTH = display.width() - UPDATE_AREA_X;
   const int16_t UPDATE_AREA_HEIGHT = 95;
 
-  char buffer[50]; // Ensure buffer is large enough
+  // Buffer for temperature display strings (max: "XX.X C" = 6 chars + null terminator)
+  char buffer[50];
 
   display.fillRect(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH, UPDATE_AREA_HEIGHT, GxEPD_WHITE);
 
@@ -165,7 +166,8 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
       Serial.println("🏊🏼\tPool Controller found using id " + device_id);
       preferences.putString("device_id", device_id);
 
-      // Use c_str() to avoid String concatenation in sensitive code
+      // Pre-allocate String buffer to reduce heap fragmentation
+      // (still uses += for concatenation, but with reserved space)
       String pool_controller;
       pool_controller.reserve(MQTT_TOPIC_BUFFER_SIZE);
       pool_controller = "homie/";
