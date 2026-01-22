@@ -30,6 +30,7 @@
 
 const char*    DEVICE_NAME           = "pool-monitor";
 const int32_t  TIME_TO_SLEEP_SECONDS = 180;   // Time ESP32 will go to sleep (in seconds)
+const int32_t  NTP_SYNC_INTERVAL_SECONDS = 3600;  // Sync NTP time every hour (3600 seconds)
 
 //MQTT settings
 String mqtt_server;
@@ -46,6 +47,22 @@ PubSubClient mqttClient(wifiClient);
 
 // data stored during deep sleep
 Preferences preferences;
+
+/**
+ * @brief Check if NTP time sync is needed based on last sync timestamp
+ * @return true if sync is needed, false otherwise
+ */
+bool isNtpSyncNeeded() {
+  unsigned long last_ntp_sync = preferences.getULong("last_ntp_sync", 0);
+  unsigned long current_time = millis() / 1000; // Current time in seconds since boot
+  unsigned long time_since_boot = preferences.getULong("total_uptime", 0);
+  
+  // If never synced or more than NTP_SYNC_INTERVAL_SECONDS have passed
+  if (last_ntp_sync == 0 || (time_since_boot - last_ntp_sync) >= NTP_SYNC_INTERVAL_SECONDS) {
+    return true;
+  }
+  return false;
+}
 
 /**
  * @brief
@@ -373,6 +390,12 @@ void setup() {
   // Store the counter to the Preferences
   preferences.putUInt("boot_count", boot_count);
 
+  // Track cumulative uptime across sleep cycles for NTP sync scheduling
+  unsigned long total_uptime = preferences.getULong("total_uptime", 0);
+  total_uptime += TIME_TO_SLEEP_SECONDS;
+  preferences.putULong("total_uptime", total_uptime);
+  Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
+
   //Print the wakeup reason for ESP32
   print_wakeup_reason();
 
@@ -396,9 +419,27 @@ void setup() {
   // Launches the portal if the connection failed
   WiFiSettings.connect(true, 45);
 
-  // Initialize a NTPClient to get time
+  // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
   timeClient.begin();
-  preferences.putString("last_update",  getCurrentTime());
+  
+  if (isNtpSyncNeeded()) {
+    Serial.println("⏰\tNTP sync needed - updating time from server");
+    String currentTime = getCurrentTime();
+    preferences.putString("last_update", currentTime);
+    
+    // Update last sync timestamp
+    unsigned long total_uptime = preferences.getULong("total_uptime", 0);
+    preferences.putULong("last_ntp_sync", total_uptime);
+    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n", 
+                  currentTime.c_str(), NTP_SYNC_INTERVAL_SECONDS);
+  } else {
+    Serial.println("⏰\tNTP sync skipped - using cached time from RTC");
+    // Update display time from RTC without NTP sync
+    time_t t = currentTZ.toLocal(timeClient.getEpochTime());
+    char buf[10];
+    snprintf(buf, sizeof(buf), "%.2d:%.2d", hour(t), minute(t));
+    preferences.putString("last_update", String(buf));
+  }
 
   for(int i=0;i<1000; i++) {
     mqttClient.loop();  //Ensure we've sent & received everything
