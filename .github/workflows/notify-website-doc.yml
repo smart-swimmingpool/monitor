@@ -1,4 +1,8 @@
 name: Alert `website` repository on `main` push
+
+permissions:
+  contents: read
+
 on:
   push:
     branches:

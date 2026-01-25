@@ -11,6 +11,9 @@ name: PlatformIO CI
 # https://docs.platformio.org/en/latest/integration/ci/github-actions.html
 #
 
+permissions:
+  contents: read
+
 on: [push]
 
 jobs:
