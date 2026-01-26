@@ -4,8 +4,7 @@
   "ignore": [
     "**/node_modules/**",
     "**/.git/**",
-    "**/GxGDE0213B72B/**",
-    "**/GxDEPG0213BN/**"
+    "**/Gx*/**"
   ],
   "absolute": true
 }
