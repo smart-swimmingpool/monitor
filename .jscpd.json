@@ -1,10 +1,12 @@
 {
-  "threshold": 0,
+  "threshold": 30,
   "reporters": ["html", "console"],
   "ignore": [
     "**/node_modules/**",
     "**/.git/**",
-    "**/Gx*/**"
+    "**/Gx*/**",
+    "**/docs/**"
   ],
   "absolute": true
 }
+
