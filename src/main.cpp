@@ -429,12 +429,28 @@ void setup() {
     
     // Update last sync timestamp
     preferences.putULong("last_ntp_sync", total_uptime);
+
+    // Store the epoch time at the moment of successful NTP sync
+    unsigned long synced_epoch = timeClient.getEpochTime();
+    preferences.putULong("last_epoch", synced_epoch);
+
     Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n", 
                   currentTime.c_str(), NTP_SYNC_INTERVAL_SECONDS);
   } else {
-    Serial.println("⏰\tNTP sync skipped - using cached time from RTC");
-    // Update display time from RTC without NTP sync
-    time_t t = currentTZ.toLocal(timeClient.getEpochTime());
+    Serial.println("⏰\tNTP sync skipped - using cached time from stored epoch and uptime");
+
+    // Reconstruct current time based on last known epoch and elapsed uptime since last sync
+    unsigned long last_epoch     = preferences.getULong("last_epoch", 0);
+    unsigned long total_uptime   = preferences.getULong("total_uptime", 0);
+    unsigned long last_ntp_sync  = preferences.getULong("last_ntp_sync", 0);
+
+    // Guard against underflow if stored values are inconsistent
+    unsigned long elapsed_since_sync = 0;
+    if (total_uptime > last_ntp_sync) {
+      elapsed_since_sync = total_uptime - last_ntp_sync;
+    }
+
+    time_t t = currentTZ.toLocal(last_epoch + elapsed_since_sync);
     char buf[10];
     snprintf(buf, sizeof(buf), "%.2d:%.2d", hour(t), minute(t));
     preferences.putString("last_update", String(buf));
