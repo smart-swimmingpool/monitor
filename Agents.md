@@ -199,11 +199,11 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - NTP-Sync bei jedem Wake-up (Energieverschwendung).
 - E-Ink Updates ohne Datenänderung (Energieverschwendung).
 - RAM-State-Annahmen über Deep-Sleep-Zyklen hinweg.
-- `update() + forceUpdate()` in derselben NTP-Retry-Iteration.
+- `update() + forceUpdate()` in derselben NTP-Retry-Iteration (verursacht unnötigen Netzwerk-Overhead).
 
 ## 20. Best Practices aus der Praxis
 
-- **Uptime-Tracking**: Bei Boot inkrementieren, nicht vor Sleep.
+- **Uptime-Tracking**: `total_uptime` bei Boot um `TIME_TO_SLEEP_SECONDS` inkrementieren, nicht vor Sleep.
 - **Zeit-Rekonstruktion**: `last_epoch + elapsed uptime` wenn NTP übersprungen.
 - **NTP-Retry**: `forceUpdate()` mit Delay vor Retry.
 - **Buffer Safety**: Konsequent `snprintf()` verwenden.
