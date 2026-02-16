@@ -390,9 +390,10 @@ void setup() {
   preferences.putUInt("boot_count", boot_count);
 
   // Track cumulative uptime across sleep cycles for NTP sync scheduling.
-  // Note: total_uptime is only read here; it should be updated elsewhere
-  // based on actual elapsed time (e.g., before entering deep sleep).
+  // Increment by sleep duration to track total time across deep sleep cycles.
   unsigned long total_uptime = preferences.getULong("total_uptime", 0);
+  total_uptime += TIME_TO_SLEEP_SECONDS;
+  preferences.putULong("total_uptime", total_uptime);
   Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
 
   //Print the wakeup reason for ESP32
@@ -440,7 +441,6 @@ void setup() {
 
     // Reconstruct current time based on last known epoch and elapsed uptime since last sync
     unsigned long last_epoch     = preferences.getULong("last_epoch", 0);
-    unsigned long total_uptime   = preferences.getULong("total_uptime", 0);
     unsigned long last_ntp_sync  = preferences.getULong("last_ntp_sync", 0);
 
     // Guard against underflow if stored values are inconsistent

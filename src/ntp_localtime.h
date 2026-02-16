@@ -27,13 +27,20 @@ static String getCurrentTime() {
   // update time with timeout to prevent infinite loop
   int retries = 0;
   const int MAX_RETRIES = 10;
-  while (!timeClient.update() && retries < MAX_RETRIES) {
-    timeClient.forceUpdate();
+  bool success = false;
+  
+  while (retries < MAX_RETRIES) {
+    if (timeClient.forceUpdate()) {
+      success = true;
+      break;
+    }
     retries++;
-    delay(500); // Delay between retries for network operations
+    if (retries < MAX_RETRIES) {
+      delay(500); // Delay before retry for network operations
+    }
   }
   
-  if (retries >= MAX_RETRIES) {
+  if (!success) {
     Serial.println("⚠️\tFailed to update NTP time");
     return String("--:--");
   }
@@ -45,21 +52,30 @@ static String getCurrentTime() {
   return String(buf);
 }
 
-static int getHourOfDay() {
-  // update time with timeout to prevent infinite loop
-  int retries = 0;
-  const int MAX_RETRIES = 10;
-  while (!timeClient.update() && retries < MAX_RETRIES) {
-    timeClient.forceUpdate();
-    retries++;
-    delay(500); // Delay between retries for network operations
-  }
-  
-  if (retries >= MAX_RETRIES) {
-    Serial.println("⚠️\tFailed to update NTP time");
-    return INVALID_HOUR_VALUE;
-  }
-  
-  time_t t = currentTZ.toLocal(timeClient.getEpochTime());
-  return hour(t);
-}
+// Unused function - kept for potential future use
+// If this function is needed, consider using cached time instead of forcing NTP sync
+// static int getHourOfDay() {
+//   // update time with timeout to prevent infinite loop
+//   int retries = 0;
+//   const int MAX_RETRIES = 10;
+//   bool success = false;
+//   
+//   while (retries < MAX_RETRIES) {
+//     if (timeClient.forceUpdate()) {
+//       success = true;
+//       break;
+//     }
+//     retries++;
+//     if (retries < MAX_RETRIES) {
+//       delay(500); // Delay before retry for network operations
+//     }
+//   }
+//   
+//   if (!success) {
+//     Serial.println("⚠️\tFailed to update NTP time");
+//     return INVALID_HOUR_VALUE;
+//   }
+//   
+//   time_t t = currentTZ.toLocal(timeClient.getEpochTime());
+//   return hour(t);
+// }
