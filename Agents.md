@@ -188,7 +188,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Build-System**: PlatformIO (nicht Arduino IDE).
 - Release: Optimiert, reduziertes Logging.
 - CI: Build, Lint (JSCPD), Format-Checks.
-- **Travis CI**: Konfiguriert in `.travis.yml`.
+- **CI-System**: GitHub Actions, konfiguriert in `.github/workflows/platform.io.yml` und `.github/workflows/linter.yml`.
 
 ## 19. Antipatterns (verboten)
 
