@@ -428,7 +428,6 @@ void setup() {
     preferences.putString("last_update", currentTime);
     
     // Update last sync timestamp
-    unsigned long total_uptime = preferences.getULong("total_uptime", 0);
     preferences.putULong("last_ntp_sync", total_uptime);
     Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n", 
                   currentTime.c_str(), NTP_SYNC_INTERVAL_SECONDS);
