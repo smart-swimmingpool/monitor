@@ -65,7 +65,7 @@ bool isNtpSyncNeeded() {
 }
 
 /**
- * @brief
+ * @brief Initialize the e-ink display with static content, icons, and layout lines.
  *
  */
 void initDisplay() {
