@@ -54,7 +54,6 @@ Preferences preferences;
  */
 bool isNtpSyncNeeded() {
   unsigned long last_ntp_sync = preferences.getULong("last_ntp_sync", 0);
-  unsigned long current_time = millis() / 1000; // Current time in seconds since boot
   unsigned long time_since_boot = preferences.getULong("total_uptime", 0);
   
   // If never synced or more than NTP_SYNC_INTERVAL_SECONDS have passed
