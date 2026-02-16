@@ -30,6 +30,7 @@
 
 const char*    DEVICE_NAME           = "pool-monitor";
 const int32_t  TIME_TO_SLEEP_SECONDS = 180;   // Time ESP32 will go to sleep (in seconds)
+const int32_t  NTP_SYNC_INTERVAL_SECONDS = 3600;  // Sync NTP time every hour (3600 seconds)
 
 //MQTT settings
 String mqtt_server;
@@ -37,6 +38,8 @@ u_int16_t mqtt_server_port;
 IPAddress  remote;     // IP Address of mqtt server
 
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
+// Buffer size for MQTT topic strings: "homie/" (6) + device_id (max ~40) + "/#" (2) + margin
+const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -46,7 +49,22 @@ PubSubClient mqttClient(wifiClient);
 Preferences preferences;
 
 /**
- * @brief
+ * @brief Check if NTP time sync is needed based on last sync timestamp
+ * @return true if sync is needed, false otherwise
+ */
+bool isNtpSyncNeeded() {
+  unsigned long last_ntp_sync = preferences.getULong("last_ntp_sync", 0);
+  unsigned long time_since_boot = preferences.getULong("total_uptime", 0);
+  
+  // If never synced or more than NTP_SYNC_INTERVAL_SECONDS have passed
+  if (last_ntp_sync == 0 || (time_since_boot - last_ntp_sync) >= NTP_SYNC_INTERVAL_SECONDS) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * @brief Initialize the e-ink display with static content, icons, and layout lines.
  *
  */
 void initDisplay() {
@@ -87,6 +105,7 @@ void updateDisplay() {
   const int16_t UPDATE_AREA_WIDTH = display.width() - UPDATE_AREA_X;
   const int16_t UPDATE_AREA_HEIGHT = 95;
 
+  // Buffer for temperature display strings (max: "XX.X C" = 6 chars + null terminator)
   char buffer[50];
 
   display.fillRect(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH, UPDATE_AREA_HEIGHT, GxEPD_WHITE);
@@ -100,7 +119,8 @@ void updateDisplay() {
 
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeSansBold24pt7b);
-  sprintf(buffer, "%2.1f C", preferences.getFloat("pool_temp", 0.0));
+  // Use snprintf for safer buffer handling
+  snprintf(buffer, sizeof(buffer), "%2.1f C", preferences.getFloat("pool_temp", 0.0));
   displayText(buffer, 50, GxEPD_ALIGN_RIGHT);
   display.drawCircle(display.width() - 35, 20, 5, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 20, 4, GxEPD_BLACK);
@@ -115,7 +135,8 @@ void updateDisplay() {
 
   display.setTextColor(GxEPD_BLACK);
   display.setFont(&FreeSansBold24pt7b);
-  sprintf(buffer, "%2.1f C", preferences.getFloat("solar_temp", 0.0));
+  // Use snprintf for safer buffer handling
+  snprintf(buffer, sizeof(buffer), "%2.1f C", preferences.getFloat("solar_temp", 0.0));
   displayText(buffer, 94, GxEPD_ALIGN_RIGHT);
   display.drawCircle(display.width() - 35, 64, 5, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 64, 4, GxEPD_BLACK);
@@ -139,8 +160,19 @@ void updateDisplay() {
  *  @brief called on MQTT message
  */
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
-  String command = String((char*) topic);
-  String payloadString = String((char*) payload).substring(0, length);
+  // Prevent memory leak: create a null-terminated copy of payload
+  char* payloadCopy = (char*)malloc(length + 1);
+  if (payloadCopy == NULL) {
+    Serial.println("⚠️\tFailed to allocate memory for MQTT payload");
+    return;
+  }
+  memcpy(payloadCopy, payload, length);
+  payloadCopy[length] = '\0';
+  
+  String command = String(topic);
+  String payloadString = String(payloadCopy);
+  free(payloadCopy);
+  
   String device_id = preferences.getString("device_id");
 
   if(command.endsWith("/$name") && device_id.length() == 0) {
@@ -150,9 +182,12 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
       Serial.println("🏊🏼\tPool Controller found using id " + device_id);
       preferences.putString("device_id", device_id);
 
-      String pool_controller = "homie/" + device_id + "/#";
-      mqttClient.subscribe(pool_controller.c_str());
-      Serial.println("🏊🏼\tSubscribed to: " + pool_controller);
+      // Use snprintf for safer string construction
+      char pool_controller[MQTT_TOPIC_BUFFER_SIZE];
+      snprintf(pool_controller, sizeof(pool_controller), "homie/%s/#", device_id.c_str());
+      mqttClient.subscribe(pool_controller);
+      Serial.print("🏊🏼\tSubscribed to: ");
+      Serial.println(pool_controller);
 
       mqttClient.unsubscribe("homie/+/$name"); //no longer required to search.
     }
@@ -197,8 +232,10 @@ void connectMQTT(IPAddress ip) {
     String device_id = preferences.getString("device_id");
 
     if(device_id.length() > 0) {
-      String pool_controller = "homie/" + device_id + "/#";
-      mqttClient.subscribe(pool_controller.c_str());
+      // Use snprintf for safer string construction
+      char pool_controller[MQTT_TOPIC_BUFFER_SIZE];
+      snprintf(pool_controller, sizeof(pool_controller), "homie/%s/#", device_id.c_str());
+      mqttClient.subscribe(pool_controller);
     } else {
       Serial.println("🏊🏼\tConnected to MQTT server searching device");
       mqttClient.subscribe("homie/+/$name");
@@ -254,6 +291,9 @@ void showWiFiConnectionFailedScreen() {
 
   // Remove all preferences under the opened namespace
   preferences.clear();
+  
+  // Close preferences before restart to prevent corruption
+  preferences.end();
 
   ESP.restart();
 }
@@ -349,6 +389,13 @@ void setup() {
   // Store the counter to the Preferences
   preferences.putUInt("boot_count", boot_count);
 
+  // Track cumulative uptime across sleep cycles for NTP sync scheduling.
+  // Increment by sleep duration to track total time across deep sleep cycles.
+  unsigned long total_uptime = preferences.getULong("total_uptime", 0);
+  total_uptime += TIME_TO_SLEEP_SECONDS;
+  preferences.putULong("total_uptime", total_uptime);
+  Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
+
   //Print the wakeup reason for ESP32
   print_wakeup_reason();
 
@@ -358,7 +405,10 @@ void setup() {
   WiFiSettings.onPortal       = []() { showSetupScreen(); };
   WiFiSettings.onSuccess      = []() { showWiFiConnectedScreen(); };
   WiFiSettings.onFailure      = []() { showWiFiConnectionFailedScreen(); };
-  WiFiSettings.onConfigSaved  = []() { ESP.restart();  }; // Reboot as soon as config is saved
+  WiFiSettings.onConfigSaved  = []() { 
+    preferences.end(); // Close preferences before restart
+    ESP.restart();  
+  }; // Reboot as soon as config is saved
 
   // Define custom settings saved by WifiSettings
   // These will return the default if nothing was set before
@@ -369,9 +419,41 @@ void setup() {
   // Launches the portal if the connection failed
   WiFiSettings.connect(true, 45);
 
-  // Initialize a NTPClient to get time
+  // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
   timeClient.begin();
-  preferences.putString("last_update",  getCurrentTime());
+  
+  if (isNtpSyncNeeded()) {
+    Serial.println("⏰\tNTP sync needed - updating time from server");
+    String currentTime = getCurrentTime();
+    preferences.putString("last_update", currentTime);
+    
+    // Update last sync timestamp
+    preferences.putULong("last_ntp_sync", total_uptime);
+
+    // Store the epoch time at the moment of successful NTP sync
+    unsigned long synced_epoch = timeClient.getEpochTime();
+    preferences.putULong("last_epoch", synced_epoch);
+
+    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n", 
+                  currentTime.c_str(), NTP_SYNC_INTERVAL_SECONDS);
+  } else {
+    Serial.println("⏰\tNTP sync skipped - using cached time from stored epoch and uptime");
+
+    // Reconstruct current time based on last known epoch and elapsed uptime since last sync
+    unsigned long last_epoch     = preferences.getULong("last_epoch", 0);
+    unsigned long last_ntp_sync  = preferences.getULong("last_ntp_sync", 0);
+
+    // Guard against underflow if stored values are inconsistent
+    unsigned long elapsed_since_sync = 0;
+    if (total_uptime > last_ntp_sync) {
+      elapsed_since_sync = total_uptime - last_ntp_sync;
+    }
+
+    time_t t = currentTZ.toLocal(last_epoch + elapsed_since_sync);
+    char buf[10];
+    snprintf(buf, sizeof(buf), "%.2d:%.2d", hour(t), minute(t));
+    preferences.putString("last_update", String(buf));
+  }
 
   for(int i=0;i<1000; i++) {
     mqttClient.loop();  //Ensure we've sent & received everything
@@ -380,6 +462,11 @@ void setup() {
   }
 
   Serial.printf("😴\tGoing to sleep now for %d sec.\n", (TIME_TO_SLEEP_SECONDS));
+
+  // Properly disconnect MQTT client to prevent memory leak
+  if (mqttClient.connected()) {
+    mqttClient.disconnect();
+  }
 
   WiFi.disconnect(true);  // Disconnect from the network
   delay( 1 );

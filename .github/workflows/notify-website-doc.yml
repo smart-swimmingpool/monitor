@@ -1,15 +1,19 @@
-name: Alert `website` repository on `master` push
+name: Alert `website` repository on `main` push
+
+permissions:
+  contents: read
+
 on:
   push:
     branches:
-      - master
+      - main
 jobs:
   build:
     name: Dispatch to `website` repository for regeneration of documents
     runs-on: ubuntu-latest
     steps:
       - name: Emit repository_dispatch
-        uses: peter-evans/repository-dispatch@v1.1.1
+        uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.HUGO_DEPLOY_TOKEN }}
           repository: smart-swimmingpool/website

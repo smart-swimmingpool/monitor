@@ -35,7 +35,7 @@ GxEPD_Class           display(io, ELINK_RESET, ELINK_BUSY);      // arbitrary se
 U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx;
 
 /**
- * @brief
+ * @brief Display text on e-ink display
  *
  * @param str
  * @param y
