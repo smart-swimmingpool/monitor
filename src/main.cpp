@@ -17,6 +17,7 @@
 #include <SPIFFS.h>
 #include <WiFiSettings.h>
 #include <Preferences.h>
+#include <strings.h>
 
 
 #define LILYGO_T5_V213 1  // see defines in board_def.h
@@ -169,10 +170,10 @@ void updateDisplay() {
  * Parse boolean MQTT state payloads used by Home Assistant topics.
  * Accepted truthy values: "true", "on", "1" (case-insensitive).
  */
-bool parseHomeAssistantBoolState(const String& value) {
-  return value.equalsIgnoreCase("true")
-      || value.equalsIgnoreCase("on")
-      || value.equalsIgnoreCase("1");
+bool parseHomeAssistantBoolState(const char* value) {
+  return strcasecmp(value, "true") == 0
+      || strcasecmp(value, "on") == 0
+      || strcasecmp(value, "1") == 0;
 }
 
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -201,11 +202,11 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
 
   } else if(command.endsWith("/pool-pump/state")) {
     Serial.println("\tPool pump: " + payloadString);
-    preferences.putBool("pump_pool", parseHomeAssistantBoolState(payloadString));
+    preferences.putBool("pump_pool", parseHomeAssistantBoolState(payloadString.c_str()));
 
   } else if(command.endsWith("/solar-pump/state")) {
     Serial.println("\tSolar pump: " + payloadString);
-    preferences.putBool("pump_solar", parseHomeAssistantBoolState(payloadString));
+    preferences.putBool("pump_solar", parseHomeAssistantBoolState(payloadString.c_str()));
 
   } else if(command.endsWith("/mode/state")) {
     Serial.println("\tOperation Mode: " + payloadString);
@@ -227,25 +228,18 @@ void connectMQTT(IPAddress ip) {
   if (mqttClient.connect(DEVICE_NAME)) {
     Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
     bool subscriptionFailed = false;
-    if (!mqttClient.subscribe(HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC)) {
-      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC);
-      subscriptionFailed = true;
-    }
-    if (!mqttClient.subscribe(HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC)) {
-      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC);
-      subscriptionFailed = true;
-    }
-    if (!mqttClient.subscribe(HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC)) {
-      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC);
-      subscriptionFailed = true;
-    }
-    if (!mqttClient.subscribe(HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC)) {
-      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC);
-      subscriptionFailed = true;
-    }
-    if (!mqttClient.subscribe(HOME_ASSISTANT_MODE_STATE_TOPIC)) {
-      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_MODE_STATE_TOPIC);
-      subscriptionFailed = true;
+    const char* subscriptions[] = {
+      HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC,
+      HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC,
+      HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC,
+      HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC,
+      HOME_ASSISTANT_MODE_STATE_TOPIC
+    };
+    for (size_t i = 0; i < sizeof(subscriptions) / sizeof(subscriptions[0]); i++) {
+      if (!mqttClient.subscribe(subscriptions[i])) {
+        Serial.printf("🛑\tFailed to subscribe to: %s\n", subscriptions[i]);
+        subscriptionFailed = true;
+      }
     }
     if (subscriptionFailed) {
       Serial.println("⚠️\tRunning in degraded mode due to missing MQTT subscriptions");
