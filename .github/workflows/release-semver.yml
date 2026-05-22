@@ -7,7 +7,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
 
 env:
   SEMVER_TAG_REGEX: ^v(0|[1-9][0-9]*)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$
@@ -49,7 +48,7 @@ jobs:
 
       - name: Verify release artifacts
         run: |
-          test -f .pio/build/LILYGO_T5_V231/firmware.bin
+          test -f .pio/build/LILYGO_T5_V231/firmware.bin || { echo "::error::Firmware artifact not found at .pio/build/LILYGO_T5_V231/firmware.bin"; exit 1; }
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
