@@ -117,14 +117,19 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 ## 11. MQTT & Kommunikation
 
 - **Home Assistant MQTT Discovery**: Pool Monitor folgt den Home-Assistant-State-Topics des Pool-Controllers.
-- **Subscribed Topics**: `homeassistant/+/+/+/state` (insbesondere `pool-temp`, `solar-temp`, `pool-pump`, `solar-pump`, `mode`).
+- **Subscribed Topics**:
+  - `homeassistant/sensor/pool-controller/pool-temp/state`
+  - `homeassistant/sensor/pool-controller/solar-temp/state`
+  - `homeassistant/switch/pool-controller/pool-pump/state`
+  - `homeassistant/switch/pool-controller/solar-pump/state`
+  - `homeassistant/select/pool-controller/mode/state`
 - **Connection Pattern**: 
   1. Verbinden
   2. Subscribe to topics
   3. Warten auf Nachrichten (mit Timeout)
   4. Disconnect vor Sleep
 - **Offline-Betrieb**: Graceful degradation bei fehlender MQTT-Verbindung, alte Daten anzeigen.
-- **Buffer-Größen**: `MQTT_TOPIC_BUFFER_SIZE = 64` für Topic-Strings.
+- **Buffer-Größen**: `MQTT_PAYLOAD_BUFFER_SIZE = 128` für eingehende MQTT-State-Payloads.
 
 ## 12. E-Ink Display
 

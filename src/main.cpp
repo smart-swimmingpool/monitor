@@ -38,11 +38,14 @@ u_int16_t mqtt_server_port;
 IPAddress  remote;     // IP Address of mqtt server
 
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
-// Buffer size for MQTT payload copy from callback
+// Buffer size for MQTT payload copy from callback.
+// 128 bytes cover expected short state payloads (temperature, ON/OFF, mode).
 const size_t MQTT_PAYLOAD_BUFFER_SIZE = 128;
-const char* HOME_ASSISTANT_SENSOR_STATE_SUBSCRIPTION = "homeassistant/sensor/pool-controller/+/state";
-const char* HOME_ASSISTANT_SWITCH_STATE_SUBSCRIPTION = "homeassistant/switch/pool-controller/+/state";
-const char* HOME_ASSISTANT_SELECT_STATE_SUBSCRIPTION = "homeassistant/select/pool-controller/+/state";
+const char* HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC = "homeassistant/sensor/pool-controller/pool-temp/state";
+const char* HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC = "homeassistant/sensor/pool-controller/solar-temp/state";
+const char* HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC = "homeassistant/switch/pool-controller/pool-pump/state";
+const char* HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC = "homeassistant/switch/pool-controller/solar-pump/state";
+const char* HOME_ASSISTANT_MODE_STATE_TOPIC = "homeassistant/select/pool-controller/mode/state";
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -223,12 +226,20 @@ void connectMQTT(IPAddress ip) {
   // Attempt to connect
   if (mqttClient.connect(DEVICE_NAME)) {
     Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
-    bool subscribed = true;
-    subscribed &= mqttClient.subscribe(HOME_ASSISTANT_SENSOR_STATE_SUBSCRIPTION);
-    subscribed &= mqttClient.subscribe(HOME_ASSISTANT_SWITCH_STATE_SUBSCRIPTION);
-    subscribed &= mqttClient.subscribe(HOME_ASSISTANT_SELECT_STATE_SUBSCRIPTION);
-    if (!subscribed) {
-      Serial.println("🛑\tFailed to subscribe to all Home Assistant state topics");
+    if (!mqttClient.subscribe(HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC)) {
+      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC);
+    }
+    if (!mqttClient.subscribe(HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC)) {
+      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC);
+    }
+    if (!mqttClient.subscribe(HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC)) {
+      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC);
+    }
+    if (!mqttClient.subscribe(HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC)) {
+      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC);
+    }
+    if (!mqttClient.subscribe(HOME_ASSISTANT_MODE_STATE_TOPIC)) {
+      Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_MODE_STATE_TOPIC);
     }
     Serial.println(F("MQTT connected."));
 
