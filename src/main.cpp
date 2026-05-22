@@ -17,7 +17,7 @@
 #include <SPIFFS.h>
 #include <WiFiSettings.h>
 #include <Preferences.h>
-#include <strings.h>
+#include <ctype.h>
 
 
 #define LILYGO_T5_V213 1  // see defines in board_def.h
@@ -170,10 +170,36 @@ void updateDisplay() {
  * Parse boolean MQTT state payloads used by Home Assistant topics.
  * Accepted truthy values: "true", "on", "1" (case-insensitive).
  */
+bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
+  if (lhs == nullptr || rhs == nullptr) {
+    return false;
+  }
+  while (*lhs != '\0' && *rhs != '\0') {
+    if (tolower(static_cast<unsigned char>(*lhs)) != tolower(static_cast<unsigned char>(*rhs))) {
+      return false;
+    }
+    lhs++;
+    rhs++;
+  }
+  return *lhs == *rhs;
+}
+
 bool parseHomeAssistantBoolState(const char* value) {
-  return strcasecmp(value, "true") == 0
-      || strcasecmp(value, "on") == 0
-      || strcasecmp(value, "1") == 0;
+  if (value == nullptr) {
+    return false;
+  }
+  if (equalsIgnoreCaseAscii(value, "true")
+      || equalsIgnoreCaseAscii(value, "on")
+      || equalsIgnoreCaseAscii(value, "1")) {
+    return true;
+  }
+  if (equalsIgnoreCaseAscii(value, "false")
+      || equalsIgnoreCaseAscii(value, "off")
+      || equalsIgnoreCaseAscii(value, "0")) {
+    return false;
+  }
+  Serial.printf("⚠️\tUnexpected boolean MQTT payload: %s (defaulting to false)\n", value);
+  return false;
 }
 
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
@@ -228,6 +254,7 @@ void connectMQTT(IPAddress ip) {
   if (mqttClient.connect(DEVICE_NAME)) {
     Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
     bool subscriptionFailed = false;
+    size_t successfulSubscriptions = 0;
     const char* subscriptions[] = {
       HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC,
       HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC,
@@ -239,8 +266,13 @@ void connectMQTT(IPAddress ip) {
       if (!mqttClient.subscribe(subscriptions[i])) {
         Serial.printf("🛑\tFailed to subscribe to: %s\n", subscriptions[i]);
         subscriptionFailed = true;
+      } else {
+        successfulSubscriptions++;
       }
     }
+    Serial.printf("📡\tMQTT subscriptions successful: %u/%u\n",
+                  static_cast<unsigned int>(successfulSubscriptions),
+                  static_cast<unsigned int>(sizeof(subscriptions) / sizeof(subscriptions[0])));
     if (subscriptionFailed) {
       Serial.println("⚠️\tRunning in degraded mode due to missing MQTT subscriptions");
     }
