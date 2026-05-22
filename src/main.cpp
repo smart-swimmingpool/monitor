@@ -38,8 +38,9 @@ u_int16_t mqtt_server_port;
 IPAddress  remote;     // IP Address of mqtt server
 
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
-// Buffer size for MQTT topic strings: "homie/" (6) + device_id (max ~40) + "/#" (2) + margin
-const size_t MQTT_TOPIC_BUFFER_SIZE = 64;
+// Buffer size for MQTT payload copy from callback
+const size_t MQTT_PAYLOAD_BUFFER_SIZE = 64;
+const char* HOME_ASSISTANT_STATE_SUBSCRIPTION = "homeassistant/+/+/+/state";
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -159,58 +160,44 @@ void updateDisplay() {
 /**
  *  @brief called on MQTT message
  */
+bool parseMqttBoolState(const String& value) {
+  return value.equalsIgnoreCase("true")
+      || value.equalsIgnoreCase("on")
+      || value.equalsIgnoreCase("1");
+}
+
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
-  // Prevent memory leak: create a null-terminated copy of payload
-  char* payloadCopy = (char*)malloc(length + 1);
-  if (payloadCopy == NULL) {
-    Serial.println("⚠️\tFailed to allocate memory for MQTT payload");
-    return;
+  char payloadCopy[MQTT_PAYLOAD_BUFFER_SIZE];
+  size_t payloadLength = length;
+  if (payloadLength >= sizeof(payloadCopy)) {
+    payloadLength = sizeof(payloadCopy) - 1;
+    Serial.println("⚠️\tMQTT payload truncated");
   }
-  memcpy(payloadCopy, payload, length);
-  payloadCopy[length] = '\0';
+  memcpy(payloadCopy, payload, payloadLength);
+  payloadCopy[payloadLength] = '\0';
   
   String command = String(topic);
   String payloadString = String(payloadCopy);
-  free(payloadCopy);
-  
-  String device_id = preferences.getString("device_id");
 
-  if(command.endsWith("/$name") && device_id.length() == 0) {
-    if(payloadString.startsWith("Pool Controller")) {
-      // got the name of the device
-      device_id = command.substring(/*"homie/"*/ 6, command.length() - 6 /*"/$name"*/);
-      Serial.println("🏊🏼\tPool Controller found using id " + device_id);
-      preferences.putString("device_id", device_id);
-
-      // Use snprintf for safer string construction
-      char pool_controller[MQTT_TOPIC_BUFFER_SIZE];
-      snprintf(pool_controller, sizeof(pool_controller), "homie/%s/#", device_id.c_str());
-      mqttClient.subscribe(pool_controller);
-      Serial.print("🏊🏼\tSubscribed to: ");
-      Serial.println(pool_controller);
-
-      mqttClient.unsubscribe("homie/+/$name"); //no longer required to search.
-    }
-
-  } else if(command.endsWith("/pool-temp/temperature")) {
+  if(command.endsWith("/pool-temp/state")) {
 
     Serial.println("\tPool temperature: " + payloadString);
     preferences.putFloat("pool_temp", payloadString.toFloat());
 
-  } else if(command.endsWith("/solar-temp/temperature")) {
+  } else if(command.endsWith("/solar-temp/state")) {
 
     Serial.println("\tSolar temperature: " + payloadString);
     preferences.putFloat("solar_temp", payloadString.toFloat());
 
-  } else if(command.endsWith("/pool-pump/switch")) {
+  } else if(command.endsWith("/pool-pump/state")) {
     Serial.println("\tPool pump: " + payloadString);
-    preferences.putBool("pump_pool", (payloadString == "true" ? true : false));
+    preferences.putBool("pump_pool", parseMqttBoolState(payloadString));
 
-  } else if(command.endsWith("/solar-pump/switch")) {
+  } else if(command.endsWith("/solar-pump/state")) {
     Serial.println("\tSolar pump: " + payloadString);
-    preferences.putBool("pump_solar", (payloadString == "true" ? true : false));
+    preferences.putBool("pump_solar", parseMqttBoolState(payloadString));
 
-  } else if(command.endsWith("/operation-mode/mode")) {
+  } else if(command.endsWith("/mode/state")) {
     Serial.println("\tOperation Mode: " + payloadString);
     preferences.putString("pool_mode", payloadString);
   } else {
@@ -228,18 +215,8 @@ void connectMQTT(IPAddress ip) {
 
   // Attempt to connect
   if (mqttClient.connect(DEVICE_NAME)) {
-
-    String device_id = preferences.getString("device_id");
-
-    if(device_id.length() > 0) {
-      // Use snprintf for safer string construction
-      char pool_controller[MQTT_TOPIC_BUFFER_SIZE];
-      snprintf(pool_controller, sizeof(pool_controller), "homie/%s/#", device_id.c_str());
-      mqttClient.subscribe(pool_controller);
-    } else {
-      Serial.println("🏊🏼\tConnected to MQTT server searching device");
-      mqttClient.subscribe("homie/+/$name");
-    }
+    Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
+    mqttClient.subscribe(HOME_ASSISTANT_STATE_SUBSCRIPTION);
     Serial.println(F("MQTT connected."));
 
   } else {

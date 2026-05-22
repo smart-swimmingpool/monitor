@@ -3,7 +3,7 @@
 [![Smart Swimmingpool](https://img.shields.io/badge/%F0%9F%8F%8A%20-Smart%20Swimmingpool-blue.svg)](https://github.com/smart-swimmingpool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-[![works with MQTT Homie](https://homieiot.github.io/img/works-with-homie.svg "[works with MQTT Homie")](https://homieiot.github.io/)
+[![Home Assistant MQTT](https://img.shields.io/badge/MQTT-Home%20Assistant-41BDF5.svg)](https://www.home-assistant.io/integrations/mqtt/)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J33A8DT)
 
@@ -20,7 +20,7 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 * [x] configurable MQTT server
 * [x] automatically connect to MQTT messages of pool controller
 * [x] open hotspot (captivate / hotspot) to configure WiFi and MQTT server
-* [x] [Homie 3.0](https://homieiot.github.io/) compatible MQTT messaging
+* [x] [Home Assistant MQTT](https://www.home-assistant.io/integrations/mqtt/) compatible messaging
 * [x] Timesync via NTP (europe.pool.ntp.org)
 
 ## Planned Features

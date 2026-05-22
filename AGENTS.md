@@ -116,8 +116,8 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 
 ## 11. MQTT & Kommunikation
 
-- **Homie 3.0 Convention**: Pool Monitor folgt Homie-IoT-Standard.
-- **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status).
+- **Home Assistant MQTT Discovery**: Pool Monitor folgt den Home-Assistant-State-Topics des Pool-Controllers.
+- **Subscribed Topics**: `homeassistant/+/+/+/state` (insbesondere `pool-temp`, `solar-temp`, `pool-pump`, `solar-pump`, `mode`).
 - **Connection Pattern**: 
   1. Verbinden
   2. Subscribe to topics
@@ -218,5 +218,5 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Energiequelle**: Aktuell USB/Batterie, geplant: Solar-Betrieb.
 - **Outdoor-Einsatz**: Geplant in wetterfestem Gehäuse am Pool.
 - **Smart Swimmingpool Ecosystem**: Teil des Smart-Swimmingpool-Projekts, kommuniziert mit Pool-Controller.
-- **Homie-kompatibel**: Nutzt Homie 3.0 MQTT Convention.
+- **Home-Assistant-kompatibel**: Nutzt Home Assistant MQTT State Topics des Pool-Controllers.
 - **Dokumentation**: User Guide, Hardware Guide, Software Guide in `docs/`.
