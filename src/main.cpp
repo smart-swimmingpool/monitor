@@ -226,20 +226,29 @@ void connectMQTT(IPAddress ip) {
   // Attempt to connect
   if (mqttClient.connect(DEVICE_NAME)) {
     Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
+    bool subscriptionFailed = false;
     if (!mqttClient.subscribe(HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC)) {
       Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC);
+      subscriptionFailed = true;
     }
     if (!mqttClient.subscribe(HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC)) {
       Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC);
+      subscriptionFailed = true;
     }
     if (!mqttClient.subscribe(HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC)) {
       Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC);
+      subscriptionFailed = true;
     }
     if (!mqttClient.subscribe(HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC)) {
       Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC);
+      subscriptionFailed = true;
     }
     if (!mqttClient.subscribe(HOME_ASSISTANT_MODE_STATE_TOPIC)) {
       Serial.printf("🛑\tFailed to subscribe to: %s\n", HOME_ASSISTANT_MODE_STATE_TOPIC);
+      subscriptionFailed = true;
+    }
+    if (subscriptionFailed) {
+      Serial.println("⚠️\tRunning in degraded mode due to missing MQTT subscriptions");
     }
     Serial.println(F("MQTT connected."));
 
