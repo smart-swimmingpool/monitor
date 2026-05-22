@@ -12,7 +12,20 @@ jobs:
     name: Dispatch to `website` repository for regeneration of documents
     runs-on: ubuntu-latest
     steps:
+      - name: Check dispatch token availability
+        id: token_check
+        env:
+          HUGO_DEPLOY_TOKEN: ${{ secrets.HUGO_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "${HUGO_DEPLOY_TOKEN}" ]; then
+            echo "::warning::HUGO_DEPLOY_TOKEN is not configured. Skipping repository dispatch."
+            echo "token_available=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "token_available=true" >> "${GITHUB_OUTPUT}"
+          fi
+
       - name: Emit repository_dispatch
+        if: steps.token_check.outputs.token_available == 'true'
         uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.HUGO_DEPLOY_TOKEN }}
