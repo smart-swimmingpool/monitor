@@ -160,6 +160,10 @@ void updateDisplay() {
 /**
  *  @brief called on MQTT message
  */
+/**
+ * Parse boolean MQTT state payloads used by Home Assistant topics.
+ * Accepted truthy values: "true", "on", "1" (case-insensitive).
+ */
 bool parseMqttBoolState(const String& value) {
   return value.equalsIgnoreCase("true")
       || value.equalsIgnoreCase("on")
@@ -171,7 +175,8 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
   size_t payloadLength = length;
   if (payloadLength >= sizeof(payloadCopy)) {
     payloadLength = sizeof(payloadCopy) - 1;
-    Serial.println("⚠️\tMQTT payload truncated");
+    Serial.printf("⚠️\tMQTT payload truncated for topic %s (original: %u bytes, buffer: %zu bytes)\n",
+                  topic, length, sizeof(payloadCopy));
   }
   memcpy(payloadCopy, payload, payloadLength);
   payloadCopy[payloadLength] = '\0';
