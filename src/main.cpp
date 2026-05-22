@@ -39,8 +39,10 @@ IPAddress  remote;     // IP Address of mqtt server
 
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
 // Buffer size for MQTT payload copy from callback
-const size_t MQTT_PAYLOAD_BUFFER_SIZE = 64;
-const char* HOME_ASSISTANT_STATE_SUBSCRIPTION = "homeassistant/+/+/+/state";
+const size_t MQTT_PAYLOAD_BUFFER_SIZE = 128;
+const char* HOME_ASSISTANT_SENSOR_STATE_SUBSCRIPTION = "homeassistant/sensor/pool-controller/+/state";
+const char* HOME_ASSISTANT_SWITCH_STATE_SUBSCRIPTION = "homeassistant/switch/pool-controller/+/state";
+const char* HOME_ASSISTANT_SELECT_STATE_SUBSCRIPTION = "homeassistant/select/pool-controller/+/state";
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -164,7 +166,7 @@ void updateDisplay() {
  * Parse boolean MQTT state payloads used by Home Assistant topics.
  * Accepted truthy values: "true", "on", "1" (case-insensitive).
  */
-bool parseMqttBoolState(const String& value) {
+bool parseHomeAssistantBoolState(const String& value) {
   return value.equalsIgnoreCase("true")
       || value.equalsIgnoreCase("on")
       || value.equalsIgnoreCase("1");
@@ -196,11 +198,11 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
 
   } else if(command.endsWith("/pool-pump/state")) {
     Serial.println("\tPool pump: " + payloadString);
-    preferences.putBool("pump_pool", parseMqttBoolState(payloadString));
+    preferences.putBool("pump_pool", parseHomeAssistantBoolState(payloadString));
 
   } else if(command.endsWith("/solar-pump/state")) {
     Serial.println("\tSolar pump: " + payloadString);
-    preferences.putBool("pump_solar", parseMqttBoolState(payloadString));
+    preferences.putBool("pump_solar", parseHomeAssistantBoolState(payloadString));
 
   } else if(command.endsWith("/mode/state")) {
     Serial.println("\tOperation Mode: " + payloadString);
@@ -221,7 +223,13 @@ void connectMQTT(IPAddress ip) {
   // Attempt to connect
   if (mqttClient.connect(DEVICE_NAME)) {
     Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
-    mqttClient.subscribe(HOME_ASSISTANT_STATE_SUBSCRIPTION);
+    bool subscribed = true;
+    subscribed &= mqttClient.subscribe(HOME_ASSISTANT_SENSOR_STATE_SUBSCRIPTION);
+    subscribed &= mqttClient.subscribe(HOME_ASSISTANT_SWITCH_STATE_SUBSCRIPTION);
+    subscribed &= mqttClient.subscribe(HOME_ASSISTANT_SELECT_STATE_SUBSCRIPTION);
+    if (!subscribed) {
+      Serial.println("🛑\tFailed to subscribe to all Home Assistant state topics");
+    }
     Serial.println(F("MQTT connected."));
 
   } else {
