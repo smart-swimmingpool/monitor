@@ -17,7 +17,7 @@
 #include <SPIFFS.h>
 #include <WiFiSettings.h>
 #include <Preferences.h>
-#include <ctype.h>
+#include <cctype>
 
 
 #define LILYGO_T5_V213 1  // see defines in board_def.h
@@ -175,7 +175,7 @@ bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
     return false;
   }
   while (*lhs != '\0' && *rhs != '\0') {
-    if (tolower(static_cast<unsigned char>(*lhs)) != tolower(static_cast<unsigned char>(*rhs))) {
+    if (std::tolower(static_cast<unsigned char>(*lhs)) != std::tolower(static_cast<unsigned char>(*rhs))) {
       return false;
     }
     lhs++;
