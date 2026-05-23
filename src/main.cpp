@@ -2,11 +2,11 @@
   Monitor to show temperature of smart-swimmingpool:
 
   ESP8266
-   - ESP8266 NodeMCU Contoller
+   - ESP8266 NodeMCU Controller
    - LiquidCrystal I2C 16*2 Display
 
   TTGO T5 E-Paper
-   - ESP32 Contoller
+   - ESP32 Controller
    - 2.13inch e-Paper
 */
 
