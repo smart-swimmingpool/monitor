@@ -53,6 +53,8 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_ANSIBLE: false
+          JSCPD_CONFIG_FILE: .jscpd.json
+          JSCPD_THRESHOLD: 30
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
