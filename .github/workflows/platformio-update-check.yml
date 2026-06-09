@@ -28,9 +28,10 @@ jobs:
           script: |
             const { execSync } = require('child_process');
 
-            // Update package index (always runs first)
-            execSync('pio pkg update', { stdio: 'inherit' });
-
+            // Do NOT run pio pkg update before pio pkg outdated — that would
+            // install the available updates and leave nothing to report.
+            // pio pkg outdated independently queries the registry.
+            //
             // Capture outdated output — pio pkg outdated returns 0 even when
             // packages are outdated, so we must parse the output ourselves.
             let output;
@@ -62,7 +63,7 @@ jobs:
               ...dataRows,
               '```',
               '',
-              'Bitte `pio pkg update` ausführen und die Änderungen committen.'
+              'Bitte die Versions-Pins in `platformio.ini` aktualisieren und die Änderungen committen.'
             ].join('\n');
 
             const existingIssues = await github.rest.issues.listForRepo({
