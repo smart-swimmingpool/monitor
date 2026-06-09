@@ -44,6 +44,7 @@ jobs:
       - name: Run Super-Linter
         uses: super-linter/super-linter@v8.6.0
         env:
+          LINTER_RULES_PATH: .github/linters
           VALIDATE_ALL_CODEBASE: false
           JSCPD_CONFIG_FILE: .jscpd.json
           JSCPD_THRESHOLD: 30

@@ -1,5 +1,6 @@
 /**
   Monitor to show temperature of smart-swimmingpool:
+  Copyright 2026 smart-swimmingpool contributors
 
   ESP8266
    - ESP8266 NodeMCU Contoller
@@ -33,7 +34,7 @@ const char*    DEVICE_NAME           = "pool-monitor";
 const int32_t  TIME_TO_SLEEP_SECONDS = 180;   // Time ESP32 will go to sleep (in seconds)
 const int32_t  NTP_SYNC_INTERVAL_SECONDS = 3600;  // Sync NTP time every hour (3600 seconds)
 
-//MQTT settings
+// MQTT settings
 String mqtt_server;
 u_int16_t mqtt_server_port;
 IPAddress  remote;     // IP Address of mqtt server
@@ -136,7 +137,7 @@ void updateDisplay() {
   display.drawCircle(display.width() - 35, 20, 4, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 20, 3, GxEPD_BLACK);
 
-  if(preferences.getBool("pump_pool", false)) {
+  if (preferences.getBool("pump_pool", false)) {
     u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
     u8g2_for_adafruit_gfx.drawGlyph(95 , 48, 0x01ec); /* run circle */
   } else {
@@ -152,7 +153,7 @@ void updateDisplay() {
   display.drawCircle(display.width() - 35, 64, 4, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 64, 3, GxEPD_BLACK);
 
-  if(preferences.getBool("pump_solar", false)) {
+  if (preferences.getBool("pump_solar", false)) {
     u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
     u8g2_for_adafruit_gfx.drawGlyph(95 , 94, 0x01ec); /* run circle */
   } else {
@@ -162,7 +163,7 @@ void updateDisplay() {
   display.updateWindow(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH - 1, UPDATE_AREA_HEIGHT - 1, true);
   // display.update();
   delay(5 * 1000);
-  //display.powerDown();
+  // display.powerDown();
 }
 
 
@@ -368,13 +369,12 @@ void showWiFiConnectedScreen() {
 Method to print the reason by which ESP32
 has been awaken from sleep
 */
-void print_wakeup_reason(){
+void print_wakeup_reason() {
   esp_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_sleep_get_wakeup_cause();
 
-  switch(wakeup_reason)
-  {
+  switch (wakeup_reason) {
     case ESP_SLEEP_WAKEUP_EXT0:
       Serial.println("Wakeup caused by external signal using RTC_IO");
       break;
@@ -390,8 +390,8 @@ void print_wakeup_reason(){
     case ESP_SLEEP_WAKEUP_ULP:
       Serial.println("Wakeup caused by ULP program");
       break;
-    default :
-      Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason);
+    default:
+      Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason);
       initDisplay();
       break;
   }
@@ -400,7 +400,7 @@ void print_wakeup_reason(){
 void setup() {
   Serial.begin(115200);
   while (!Serial) {
-    ;  // wait for serial port to connect. Needed for native USB port only
+    // wait for serial port to connect. Needed for native USB port only
   }
 
   Serial.println(F(" ------------------------------------- "));
@@ -423,13 +423,13 @@ void setup() {
     while (1) {
       delay(1000);
     }
-  };
+  }
   // Remove all preferences under the opened namespace
-  //preferences.clear();
+  // preferences.clear();
   Serial.printf("Number of free entries in prefs: %d\n", preferences.freeEntries());
 
   unsigned int boot_count = preferences.getUInt("boot_count", 0);
-  //Increment boot number and print it every reboot
+  // Increment boot number and print it every reboot
   Serial.printf("Current boot count: %u\n", ++boot_count);
   // Store the counter to the Preferences
   preferences.putUInt("boot_count", boot_count);
@@ -441,7 +441,7 @@ void setup() {
   preferences.putULong("total_uptime", total_uptime);
   Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
 
-  //Print the wakeup reason for ESP32
+  // Print the wakeup reason for ESP32
   print_wakeup_reason();
 
   SPIFFS.begin(true);  // Will format on the first run after failing to mount
@@ -451,9 +451,9 @@ void setup() {
   WiFiSettings.onSuccess      = []() { showWiFiConnectedScreen(); };
   WiFiSettings.onFailure      = []() { showWiFiConnectionFailedScreen(); };
   WiFiSettings.onConfigSaved  = []() {
-    preferences.end(); // Close preferences before restart
+    preferences.end();  // Close preferences before restart
     ESP.restart();
-  }; // Reboot as soon as config is saved
+  };  // Reboot as soon as config is saved
 
   // Define custom settings saved by WifiSettings
   // These will return the default if nothing was set before
@@ -502,8 +502,8 @@ void setup() {
 
   // Process MQTT messages with timeout (2 seconds max, 200 * 10ms)
   // Retained messages arrive immediately after subscribe, so this is sufficient
-  for(int i=0;i<200; i++) {
-    mqttClient.loop();  //Ensure we've sent & received everything
+  for (int i = 0; i < 200; i++) {
+    mqttClient.loop();  // Ensure we've sent & received everything
     delay(10);
   }
 
@@ -515,12 +515,12 @@ void setup() {
   }
 
   WiFi.disconnect(true);  // Disconnect from the network
-  delay( 1 );
+  delay(1);
   WiFi.mode(WIFI_OFF);    // Switch WiFi off
-  delay( 1 );
+  delay(1);
 
   updateDisplay();
-  delay(3000); // Wait for the display to update
+  delay(3000);  // Wait for the display to update
   display.powerDown();
 
   // Close SPIFFS to prevent flash handle leak over sleep cycles
