@@ -54,5 +54,9 @@
         "system_error": "cpp",
         "typeinfo": "cpp",
         "utility": "cpp"
-    }
+    },
+    "clangd.arguments": [
+        "--compile-commands-dir=/mnt/ssd/projects/monitor/.cache/clangd",
+        "--query-driver=/home/openclaw/.platformio/packages/toolchain-*/bin/*,/home/openclaw/.platformio/packages/tool-*/bin/*"
+    ]
 }

@@ -1,0 +1,94 @@
+name: PlatformIO Update Check
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Check for outdated packages and create issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { execSync } = require('child_process');
+
+            // Do NOT run pio pkg update before pio pkg outdated — that would
+            // install the available updates and leave nothing to report.
+            // pio pkg outdated independently queries the registry.
+            //
+            // Capture outdated output — pio pkg outdated returns 0 even when
+            // packages are outdated, so we must parse the output ourselves.
+            let output;
+            try {
+              output = execSync('pio pkg outdated', { encoding: 'utf-8' });
+            } catch (e) {
+              // Command failed entirely — still try to use its stdout if any
+              output = e.stdout || '';
+            }
+
+            const lines = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+            // Skip header lines (Package / Current / Latest / dashes) and
+            // count rows that look like actual outdated package entries.
+            const dataRows = lines.filter(l => /^[\w.-]/.test(l) && !/^Package/i.test(l) && !/^-+$/.test(l));
+
+            if (dataRows.length === 0) {
+              console.log('All packages are up to date.');
+              return;
+            }
+
+            console.log(dataRows.length + ' outdated package(s) found:');
+
+            const issueTitle = 'PlatformIO Updates Available';
+            const body = [
+              'Folgende PlatformIO-Abhängigkeiten sind veraltet:',
+              '',
+              '```',
+              ...dataRows,
+              '```',
+              '',
+              'Bitte die Versions-Pins in `platformio.ini` aktualisieren und die Änderungen committen.'
+            ].join('\n');
+
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+
+            const existing = existingIssues.data.find(issue => issue.title === issueTitle);
+
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+              console.log(`Updated existing issue #${existing.number}`);
+            } else {
+              const newIssue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body,
+                labels: ['enhancement', 'dependencies']
+              });
+              console.log(`Created issue #${newIssue.data.number}`);
+            }

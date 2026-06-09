@@ -29,4 +29,4 @@ menu:
 
 {{< figure library="true" src="pool-monitor-prototype.jpg" title="Prototype of Pool Monitor" lightbox="true" >}}
 
-[![works with MQTT Homie](https://homieiot.github.io/img/works-with-homie.svg "works with MQTT Homie")](https://homieiot.github.io/)
+[![works with Home Assistant](https://img.shields.io/badge/works%20with-Home%20Assistant-41BDF5.svg?logo=home-assistant&logoColor=white "works with Home Assistant")](https://www.home-assistant.io/)
