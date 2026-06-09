@@ -17,6 +17,7 @@
 #include <SPIFFS.h>
 #include <WiFiSettings.h>
 #include <Preferences.h>
+#include <cctype>
 
 
 #define LILYGO_T5_V213 1  // see defines in board_def.h
@@ -45,6 +46,10 @@ const char* HA_TOPIC_SOLAR_TEMP  = "homeassistant/sensor/pool-controller/solar-t
 const char* HA_TOPIC_POOL_PUMP   = "homeassistant/switch/pool-controller/pool-pump/state";
 const char* HA_TOPIC_SOLAR_PUMP  = "homeassistant/switch/pool-controller/solar-pump/state";
 const char* HA_TOPIC_MODE        = "homeassistant/select/pool-controller/mode/state";
+
+// Buffer size for MQTT payload copy from callback.
+// 128 bytes cover expected short state payloads (temperature, ON/OFF, mode).
+const size_t MQTT_PAYLOAD_BUFFER_SIZE = 128;
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -162,20 +167,60 @@ void updateDisplay() {
 
 
 /**
+ * Case-insensitive ASCII string comparison.
+ */
+static bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
+  if (lhs == nullptr || rhs == nullptr) {
+    return false;
+  }
+  while (*lhs != '\0' && *rhs != '\0') {
+    if (std::tolower(static_cast<unsigned char>(*lhs)) != std::tolower(static_cast<unsigned char>(*rhs))) {
+      return false;
+    }
+    lhs++;
+    rhs++;
+  }
+  return *lhs == *rhs;
+}
+
+/**
+ * Parse boolean MQTT state payloads used by Home Assistant topics.
+ * Accepted truthy values: "true", "on", "1" (case-insensitive).
+ */
+static bool parseHomeAssistantBoolState(const char* value) {
+  if (value == nullptr) {
+    return false;
+  }
+  if (equalsIgnoreCaseAscii(value, "true")
+      || equalsIgnoreCaseAscii(value, "on")
+      || equalsIgnoreCaseAscii(value, "1")) {
+    return true;
+  }
+  if (equalsIgnoreCaseAscii(value, "false")
+      || equalsIgnoreCaseAscii(value, "off")
+      || equalsIgnoreCaseAscii(value, "0")) {
+    return false;
+  }
+  Serial.printf("⚠️\tUnexpected boolean MQTT payload: %s (defaulting to false)\n", value);
+  return false;
+}
+
+/**
  *  @brief called on MQTT message
  */
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
-  // Prevent memory leak: create a null-terminated copy of payload
-  char* payloadCopy = static_cast<char*>(malloc(length + 1));
-  if (payloadCopy == NULL) {
-    Serial.println("⚠️\tFailed to allocate memory for MQTT payload");
-    return;
+  // Stack-allocated buffer instead of heap allocation (Deep-Sleep-sicher, kein Fragmentierungsrisiko)
+  char payloadCopy[MQTT_PAYLOAD_BUFFER_SIZE];
+  size_t payloadLength = length;
+  if (payloadLength >= sizeof(payloadCopy)) {
+    payloadLength = sizeof(payloadCopy) - 1;
+    Serial.printf("⚠️\tMQTT payload truncated for topic %s (original: %u bytes, buffer: %zu bytes)\n",
+                  topic, length, sizeof(payloadCopy));
   }
-  memcpy(payloadCopy, payload, length);
-  payloadCopy[length] = '\0';
-  
+  memcpy(payloadCopy, payload, payloadLength);
+  payloadCopy[payloadLength] = '\0';
+
   String payloadString = String(payloadCopy);
-  free(payloadCopy);
 
   // Match Home Assistant state topics directly
   if (strcmp(topic, HA_TOPIC_POOL_TEMP) == 0) {
@@ -188,11 +233,11 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
 
   } else if (strcmp(topic, HA_TOPIC_POOL_PUMP) == 0) {
     Serial.println("\tPool pump: " + payloadString);
-    preferences.putBool("pump_pool", (payloadString == "ON"));
+    preferences.putBool("pump_pool", parseHomeAssistantBoolState(payloadCopy));
 
   } else if (strcmp(topic, HA_TOPIC_SOLAR_PUMP) == 0) {
     Serial.println("\tSolar pump: " + payloadString);
-    preferences.putBool("pump_solar", (payloadString == "ON"));
+    preferences.putBool("pump_solar", parseHomeAssistantBoolState(payloadCopy));
 
   } else if (strcmp(topic, HA_TOPIC_MODE) == 0) {
     Serial.println("\tOperation Mode: " + payloadString);
@@ -214,13 +259,30 @@ void connectMQTT(IPAddress ip) {
   if (mqttClient.connect(DEVICE_NAME)) {
     Serial.println(F("MQTT connected."));
 
-    // Subscribe to Home Assistant state topics (fixed, no discovery needed)
-    mqttClient.subscribe(HA_TOPIC_POOL_TEMP);
-    mqttClient.subscribe(HA_TOPIC_SOLAR_TEMP);
-    mqttClient.subscribe(HA_TOPIC_POOL_PUMP);
-    mqttClient.subscribe(HA_TOPIC_SOLAR_PUMP);
-    mqttClient.subscribe(HA_TOPIC_MODE);
-    Serial.println(F("Subscribed to Home Assistant state topics."));
+    // Subscribe to Home Assistant state topics with per-subscription diagnostics
+    bool subscriptionFailed = false;
+    size_t successfulSubscriptions = 0;
+    const char* subscriptions[] = {
+      HA_TOPIC_POOL_TEMP,
+      HA_TOPIC_SOLAR_TEMP,
+      HA_TOPIC_POOL_PUMP,
+      HA_TOPIC_SOLAR_PUMP,
+      HA_TOPIC_MODE
+    };
+    for (size_t i = 0; i < sizeof(subscriptions) / sizeof(subscriptions[0]); i++) {
+      if (!mqttClient.subscribe(subscriptions[i])) {
+        Serial.printf("🛑\tFailed to subscribe to: %s\n", subscriptions[i]);
+        subscriptionFailed = true;
+      } else {
+        successfulSubscriptions++;
+      }
+    }
+    Serial.printf("📡\tMQTT subscriptions successful: %u/%u\n",
+                  static_cast<unsigned int>(successfulSubscriptions),
+                  static_cast<unsigned int>(sizeof(subscriptions) / sizeof(subscriptions[0])));
+    if (subscriptionFailed) {
+      Serial.println("⚠️\tRunning in degraded mode due to missing MQTT subscriptions");
+    }
 
   } else {
     Serial.printf("failed, rc=%d\n", mqttClient.state());
