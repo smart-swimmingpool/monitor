@@ -9,7 +9,7 @@ on:
       - main
     paths:
       - docs/**
-      - README.md
+      - Readme.md
       - CHANGELOG.md
       - .github/workflows/notify-website-doc.yml
 
