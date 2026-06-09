@@ -43,6 +43,9 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 
 Run the local quality gates before pushing changes so lint findings are fixed before CI:
 
+* Install Python-based linters once with `python3 -m pip install --user cpplint yamllint`
+* `markdownlint-cli2` and `jscpd` are executed on demand via `npx`
+
 ```bash
 platformio check --environment LILYGO_T5_V231 --skip-packages
 platformio run --environment LILYGO_T5_V231

@@ -69,6 +69,7 @@ Architekturregeln:
   - `CPPLINT.cfg` bleibt im Repository-Root; nicht nach `.github/linters/` verschieben.
   - Markdown-Dateien müssen ohne Trailing Spaces, mit genau einer H1 pro Datei und ohne nackte URLs gepflegt werden.
   - Workflow- und Konfigurationsdateien (`*.yml`, `*.yaml`, `*.json`) müssen lokal auf Syntax geprüft werden, wenn sie geändert werden.
+  - Für lokale Runs werden `cpplint` und `yamllint` per `pip` installiert; `markdownlint-cli2` und `jscpd` können per `npx` direkt ausgeführt werden.
 - **Lokal ausführen**:
 
   ```bash
