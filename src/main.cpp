@@ -65,7 +65,7 @@ Preferences preferences;
 bool isNtpSyncNeeded() {
   unsigned long last_ntp_sync = preferences.getULong("last_ntp_sync", 0);
   unsigned long time_since_boot = preferences.getULong("total_uptime", 0);
-  
+
   // If never synced or more than NTP_SYNC_INTERVAL_SECONDS have passed
   if (last_ntp_sync == 0 || (time_since_boot - last_ntp_sync) >= NTP_SYNC_INTERVAL_SECONDS) {
     return true;
@@ -334,7 +334,7 @@ void showWiFiConnectionFailedScreen() {
 
   // Remove all preferences under the opened namespace
   preferences.clear();
-  
+
   // Close preferences before restart to prevent corruption
   preferences.end();
 
@@ -448,9 +448,9 @@ void setup() {
   WiFiSettings.onPortal       = []() { showSetupScreen(); };
   WiFiSettings.onSuccess      = []() { showWiFiConnectedScreen(); };
   WiFiSettings.onFailure      = []() { showWiFiConnectionFailedScreen(); };
-  WiFiSettings.onConfigSaved  = []() { 
+  WiFiSettings.onConfigSaved  = []() {
     preferences.end(); // Close preferences before restart
-    ESP.restart();  
+    ESP.restart();
   }; // Reboot as soon as config is saved
 
   // Define custom settings saved by WifiSettings
@@ -464,12 +464,12 @@ void setup() {
 
   // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
   timeClient.begin();
-  
+
   if (isNtpSyncNeeded()) {
     Serial.println("⏰\tNTP sync needed - updating time from server");
     String currentTime = getCurrentTime();
     preferences.putString("last_update", currentTime);
-    
+
     // Update last sync timestamp
     preferences.putULong("last_ntp_sync", total_uptime);
 
@@ -477,7 +477,7 @@ void setup() {
     unsigned long synced_epoch = timeClient.getEpochTime();
     preferences.putULong("last_epoch", synced_epoch);
 
-    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n", 
+    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
                   currentTime.c_str(), NTP_SYNC_INTERVAL_SECONDS);
   } else {
     Serial.println("⏰\tNTP sync skipped - using cached time from stored epoch and uptime");

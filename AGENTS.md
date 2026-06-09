@@ -135,7 +135,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 
 - **Home Assistant MQTT Topics**: Der Pool Monitor soll die retained State-Topics des Pool-Controllers konsumieren statt Homie-Discovery zu verwenden.
 - **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status, Betriebsmodus) direkt über HA-Topics.
-- **Connection Pattern**: 
+- **Connection Pattern**:
   1. Verbinden
   2. Subscribe to 5 fixed HA state topics
   3. Warten auf Nachrichten (mit Timeout)
@@ -153,7 +153,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
   - Pump-Status (on/off)
   - Solar-Status (on/off)
   - Timestamp
-  - Branding (www.smart-swimmingpool.com)
+  - Branding (<www.smart-swimmingpool.com>)
 - **Icons**: U8g2-Fonts für Icons (Pool, Solar Panel).
 - **Energieverbrauch**: Display-Updates sind energieintensiv, sparsam einsetzen.
 

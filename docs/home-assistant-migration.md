@@ -9,7 +9,7 @@ type: docs
 tags: ["docs", "monitor", "home-assistant", "mqtt", "migration"]
 ---
 
-# Home Assistant Migration Notes
+## Home Assistant Migration Notes
 
 ## Context
 
