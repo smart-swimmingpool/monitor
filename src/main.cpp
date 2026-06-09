@@ -257,6 +257,7 @@ void showSetupScreen() {
 
   // Remove all preferences under the opened namespace
   preferences.clear();
+  preferences.end();
 }
 
 void showWiFiConnectionFailedScreen() {
@@ -435,9 +436,10 @@ void setup() {
     preferences.putString("last_update", String(buf));
   }
 
-  for(int i=0;i<1000; i++) {
+  // Process MQTT messages with timeout (2 seconds max, 200 * 10ms)
+  // Retained messages arrive immediately after subscribe, so this is sufficient
+  for(int i=0;i<200; i++) {
     mqttClient.loop();  //Ensure we've sent & received everything
-    //Serial.print(i);
     delay(10);
   }
 
@@ -456,6 +458,9 @@ void setup() {
   updateDisplay();
   delay(3000); // Wait for the display to update
   display.powerDown();
+
+  // Close SPIFFS to prevent flash handle leak over sleep cycles
+  SPIFFS.end();
 
   // Close the Preferences
   preferences.end();
