@@ -166,7 +166,7 @@ void updateDisplay() {
  */
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
   // Prevent memory leak: create a null-terminated copy of payload
-  char* payloadCopy = (char*)malloc(length + 1);
+  char* payloadCopy = static_cast<char*>(malloc(length + 1));
   if (payloadCopy == NULL) {
     Serial.println("⚠️\tFailed to allocate memory for MQTT payload");
     return;
