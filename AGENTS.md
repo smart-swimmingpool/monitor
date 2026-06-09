@@ -70,16 +70,16 @@ Architekturregeln:
   - Markdown-Dateien müssen ohne Trailing Spaces, mit genau einer H1 pro Datei und ohne nackte URLs gepflegt werden.
   - Workflow- und Konfigurationsdateien (`*.yml`, `*.yaml`, `*.json`) müssen lokal auf Syntax geprüft werden, wenn sie geändert werden.
   - Für lokale Runs werden `cpplint` und `yamllint` per `pip` installiert; `markdownlint-cli2` und `jscpd` können per `npx` direkt ausgeführt werden.
-- **Lokal ausführen**: Die folgende Bash-only Sequenz nutzt `mapfile` und Bash-Arrays.
+- **Lokal ausführen**: Änderungen zuerst stagen; die folgende Bash-only Sequenz nutzt `mapfile`, Bash-Arrays und `git diff --cached`.
 
   ```bash
   platformio check --environment LILYGO_T5_V231 --skip-packages
   platformio run --environment LILYGO_T5_V231
-  mapfile -t cpp_files < <(git diff --name-only -- '*.cpp' '*.hpp' '*.h')
+  mapfile -t cpp_files < <(git diff --cached --name-only -- '*.cpp' '*.hpp' '*.h')
   ((${#cpp_files[@]})) && cpplint "${cpp_files[@]}"
-  mapfile -t md_files < <(git diff --name-only -- '*.md')
+  mapfile -t md_files < <(git diff --cached --name-only -- '*.md')
   ((${#md_files[@]})) && npx --yes markdownlint-cli2 "${md_files[@]}"
-  mapfile -t yaml_files < <(git diff --name-only -- '*.yml' '*.yaml')
+  mapfile -t yaml_files < <(git diff --cached --name-only -- '*.yml' '*.yaml')
   ((${#yaml_files[@]})) && yamllint "${yaml_files[@]}"
   npx --yes jscpd --config .jscpd.json src .github/workflows
   python -m json.tool .jscpd.json > /dev/null

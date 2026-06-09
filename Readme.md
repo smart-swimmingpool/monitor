@@ -45,16 +45,16 @@ Run the local quality gates before pushing changes so lint findings are fixed be
 
 * Install Python-based linters once with `python3 -m pip install --user cpplint yamllint`
 * `markdownlint-cli2` and `jscpd` are executed on demand via `npx`
-* Run the following Bash-only snippet (`mapfile` and arrays require Bash)
+* Stage your changes first, then run the following Bash-only snippet (`mapfile`, arrays and `git diff --cached` require Bash)
 
 ```bash
 platformio check --environment LILYGO_T5_V231 --skip-packages
 platformio run --environment LILYGO_T5_V231
-mapfile -t cpp_files < <(git diff --name-only -- '*.cpp' '*.hpp' '*.h')
+mapfile -t cpp_files < <(git diff --cached --name-only -- '*.cpp' '*.hpp' '*.h')
 ((${#cpp_files[@]})) && cpplint "${cpp_files[@]}"
-mapfile -t md_files < <(git diff --name-only -- '*.md')
+mapfile -t md_files < <(git diff --cached --name-only -- '*.md')
 ((${#md_files[@]})) && npx --yes markdownlint-cli2 "${md_files[@]}"
-mapfile -t yaml_files < <(git diff --name-only -- '*.yml' '*.yaml')
+mapfile -t yaml_files < <(git diff --cached --name-only -- '*.yml' '*.yaml')
 ((${#yaml_files[@]})) && yamllint "${yaml_files[@]}"
 npx --yes jscpd --config .jscpd.json src .github/workflows
 python -m json.tool .jscpd.json > /dev/null
