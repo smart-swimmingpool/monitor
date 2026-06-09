@@ -73,16 +73,15 @@ Below is the state of the current checkout.
 
 | Library | Pin in `platformio.ini` | Resolved version in `.pio/libdeps` |
 | --- | --- | --- |
-| espressif32 platform | `^6.5.0` | build platform only, not stored in `library.properties` |
+| espressif32 platform | `^7.0.0` | build platform only, not stored in `library.properties` |
 | Adafruit BusIO | `^1.16.1` | `1.17.4` |
 | Adafruit GFX Library | `^1.11.11` | `1.12.6` |
 | GxEPD | `^3.1.1` | `3.1.3` |
 | ESP-WiFiSettings | `^3.9.2` | `3.10.1` |
 | U8g2 | `^2.35.30` | `2.36.18` |
 | U8g2_for_Adafruit_GFX | `1.8.0` | `1.8.0` |
-| PubSubClient | `2.8` | `2.8` |
+| PubSubClient3 | `^3.1.0` | `3.1.0` |
 | NTPClient | `3.2.1` | `3.2.1` |
-| mDNSResolver | `0.3` | `0.3` |
 | Timezone | `1.2.4` | `1.2.6` |
 | Time | not pinned directly | `1.6.1` |
 

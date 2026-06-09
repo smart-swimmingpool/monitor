@@ -16,7 +16,7 @@ Der Agent:
 
 - Plattform: ESP32 (LILYGO T5 V231 mit E-Ink Display); Framework: Arduino.
 - PlatformIO: Single-Source für Build-Konfiguration (`platformio.ini`), Projekt-Environments, Lib-Pins.
-- Wichtige Abhängigkeiten: GxEPD (E-Ink), PubSubClient (MQTT), WiFiSettings (Configuration), NTPClient (Time Sync).
+- Wichtige Abhängigkeiten: GxEPD (E-Ink), PubSubClient3 (MQTT), WiFiSettings (Configuration), NTPClient (Time Sync), Home Assistant MQTT Discovery im Zielsystem.
 
 ## 3. Projektstruktur und Architektur
 
@@ -116,8 +116,8 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 
 ## 11. MQTT & Kommunikation
 
-- **Home Assistant MQTT Topics**: Pool Monitor abonniert feste HA-State-Topics des pool-controllers (kein Homie Discovery).
-- **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status) via HA-State-Topics.
+- **Home Assistant MQTT Topics**: Der Pool Monitor soll die retained State-Topics des Pool-Controllers konsumieren statt Homie-Discovery zu verwenden.
+- **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status, Betriebsmodus) direkt über HA-Topics.
 - **Connection Pattern**: 
   1. Verbinden
   2. Subscribe to 5 fixed HA state topics
@@ -176,7 +176,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - Minimiert, begründet, Version-Pinned in `platformio.ini`.
 - Wichtige Dependencies:
   - GxEPD @ ^3.1.1 (E-Ink Display)
-  - PubSubClient @ ^2.8 (MQTT)
+  - PubSubClient3 @ ^3.1.0 (MQTT)
   - WiFiSettings @ ^3.9.2 (Configuration)
   - NTPClient @ ^3.2.1 (Time Sync)
   - U8g2 @ ^2.35.30 (Icons/Fonts)
@@ -187,8 +187,8 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Branch**: `main` (nicht `master`).
 - **Build-System**: PlatformIO (nicht Arduino IDE).
 - Release: Optimiert, reduziertes Logging.
-- CI: Build, Lint (JSCPD), Format-Checks.
-- **CI-System**: GitHub Actions, konfiguriert in `.github/workflows/platform.io.yml` und `.github/workflows/linter.yml`.
+- CI: Build, Lint (JSCPD), Format-Checks; PlatformIO-Check + Build in CI.
+- **CI-System**: GitHub Actions, konfiguriert in `.github/workflows/plaform.io.yml`, `.github/workflows/linter.yml` und `.github/workflows/codeql-analysis.yml`.
 
 ## 19. Antipatterns (verboten)
 
@@ -213,10 +213,9 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Logging**: Strukturiert mit Emojis für bessere Lesbarkeit im Serial Monitor.
 
 ## 21. Projektspezifisches
-
-- **Hauptzweck**: E-Ink Display zur Anzeige von Pool-Daten (Temperatur, Status).
+- **Hauptzweck**: E-Ink Display zur Anzeige von Pool-Daten (Temperatur, Status) aus Home Assistant MQTT Discovery.
 - **Energiequelle**: Aktuell USB/Batterie, geplant: Solar-Betrieb.
 - **Outdoor-Einsatz**: Geplant in wetterfestem Gehäuse am Pool.
 - **Smart Swimmingpool Ecosystem**: Teil des Smart-Swimmingpool-Projekts, kommuniziert mit Pool-Controller.
-- **Homie-kompatibel**: Nutzt Homie 3.0 MQTT Convention.
+- **Home-Assistant-kompatibel**: Zielintegration ist Home Assistant MQTT Discovery; Homie ist nur noch Altlast.
 - **Dokumentation**: User Guide, Hardware Guide, Software Guide in `docs/`.
