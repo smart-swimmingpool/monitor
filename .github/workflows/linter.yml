@@ -49,6 +49,7 @@ jobs:
           JSCPD_THRESHOLD: 30
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINTER_RULES_PATH: .
 
           # PlatformIO project optimizations
           FILTER_REGEX_EXCLUDE: .*/(\.pio|\.vscode|\.platformio|build|lib)/.*

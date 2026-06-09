@@ -15,6 +15,7 @@ Der Agent:
 ## 1b. Empfohlene Hermes-Skills für dieses Repo
 
 Für größere oder riskantere Änderungen in diesem Repository sollten diese Skills geladen werden:
+
 - `monitor-migration-workflow` — projektbezogener Umbrella-Workflow für Home-Assistant-/CI-Migrationen.
 - `writing-plans` — wenn eine Änderung in mehrere kleine, überprüfbare Schritte zerlegt werden soll.
 - `test-driven-development` — wenn Firmware- oder Parser-Logik geändert wird.
@@ -63,10 +64,25 @@ Architekturregeln:
 - **Lint**: `cppcheck` oder vergleichbare Tools (optional, nicht CI-pflichtig).
 - **Duplicate Code Detection**: JSCPD mit 30% Threshold, exclude `docs/` und `Gx*/` Verzeichnisse.
 - **CI**: Jeder Push/PR durchläuft `platformio check` + Build (`pio run`) in `.github/workflows/plaform.io.yml`.
-- **Lokal ausführen**:
+- **Quality-Check-Gate**: Vor jedem Commit/PR immer zuerst die lokalen Quality Checks ausführen und erkannte Findings direkt beheben, statt sie erst in CI zu entdecken.
+- **Super-Linter-Parität**:
+  - `CPPLINT.cfg` bleibt im Repository-Root; nicht nach `.github/linters/` verschieben.
+  - Markdown-Dateien müssen ohne Trailing Spaces, mit genau einer H1 pro Datei und ohne nackte URLs gepflegt werden.
+  - Workflow- und Konfigurationsdateien (`*.yml`, `*.yaml`, `*.json`) müssen lokal auf Syntax geprüft werden, wenn sie geändert werden.
+  - Für lokale Runs werden `cpplint` und `yamllint` per `pip` installiert; `markdownlint-cli2` und `jscpd` können per `npx` direkt ausgeführt werden.
+- **Lokal ausführen**: Änderungen zuerst stagen; die folgende Bash-only Sequenz nutzt `mapfile`, Bash-Arrays und `git diff --cached`.
+
   ```bash
   platformio check --environment LILYGO_T5_V231 --skip-packages
   platformio run --environment LILYGO_T5_V231
+  mapfile -t cpp_files < <(git diff --cached --name-only -- '*.cpp' '*.hpp' '*.h')
+  ((${#cpp_files[@]})) && cpplint "${cpp_files[@]}"
+  mapfile -t md_files < <(git diff --cached --name-only -- '*.md')
+  ((${#md_files[@]})) && npx --yes markdownlint-cli2 "${md_files[@]}"
+  mapfile -t yaml_files < <(git diff --cached --name-only -- '*.yml' '*.yaml')
+  ((${#yaml_files[@]})) && yamllint "${yaml_files[@]}"
+  npx --yes jscpd --config .jscpd.json src .github/workflows
+  python -m json.tool .jscpd.json > /dev/null
   ```
 
 ## 6. Commit-Konventionen (Conventional Commits)
@@ -230,6 +246,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Logging**: Strukturiert mit Emojis für bessere Lesbarkeit im Serial Monitor.
 
 ## 21. Projektspezifisches
+
 - **Hauptzweck**: E-Ink Display zur Anzeige von Pool-Daten (Temperatur, Status) aus Home Assistant MQTT Discovery.
 - **Energiequelle**: Aktuell USB/Batterie, geplant: Solar-Betrieb.
 - **Outdoor-Einsatz**: Geplant in wetterfestem Gehäuse am Pool.

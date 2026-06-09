@@ -1,0 +1,9 @@
+{
+  "ignores": [
+    "docs/_index.md",
+    "docs/_index.de.md"
+  ],
+  "config": {
+    "MD013": false
+  }
+}

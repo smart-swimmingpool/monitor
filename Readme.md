@@ -14,7 +14,6 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 * Pool pump status (on/off)
 * Solar heating status (on/off)
 
-
 ## Features
 
 * [x] configurable MQTT server
@@ -39,6 +38,27 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 * [Hardware Guide](docs/hardware-guide.md)
 * [Software Guide](docs/software-guide.md)
 * [Home Assistant Migration Notes](docs/home-assistant-migration.md)
+
+## Quality Checks
+
+Run the local quality gates before pushing changes so lint findings are fixed before CI:
+
+* Install Python-based linters once with `python3 -m pip install --user cpplint yamllint`
+* `markdownlint-cli2` and `jscpd` are executed on demand via `npx`
+* Stage your changes first, then run the following Bash-only snippet (`mapfile`, arrays and `git diff --cached` require Bash)
+
+```bash
+platformio check --environment LILYGO_T5_V231 --skip-packages
+platformio run --environment LILYGO_T5_V231
+mapfile -t cpp_files < <(git diff --cached --name-only -- '*.cpp' '*.hpp' '*.h')
+((${#cpp_files[@]})) && cpplint "${cpp_files[@]}"
+mapfile -t md_files < <(git diff --cached --name-only -- '*.md')
+((${#md_files[@]})) && npx --yes markdownlint-cli2 "${md_files[@]}"
+mapfile -t yaml_files < <(git diff --cached --name-only -- '*.yml' '*.yaml')
+((${#yaml_files[@]})) && yamllint "${yaml_files[@]}"
+npx --yes jscpd --config .jscpd.json src .github/workflows
+python -m json.tool .jscpd.json > /dev/null
+```
 
 ## Discussions
 
