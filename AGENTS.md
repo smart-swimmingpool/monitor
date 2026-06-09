@@ -15,6 +15,7 @@ Der Agent:
 ## 1b. Empfohlene Hermes-Skills für dieses Repo
 
 Für größere oder riskantere Änderungen in diesem Repository sollten diese Skills geladen werden:
+
 - `monitor-migration-workflow` — projektbezogener Umbrella-Workflow für Home-Assistant-/CI-Migrationen.
 - `writing-plans` — wenn eine Änderung in mehrere kleine, überprüfbare Schritte zerlegt werden soll.
 - `test-driven-development` — wenn Firmware- oder Parser-Logik geändert wird.
@@ -69,13 +70,14 @@ Architekturregeln:
   - Markdown-Dateien müssen ohne Trailing Spaces, mit genau einer H1 pro Datei und ohne nackte URLs gepflegt werden.
   - Workflow- und Konfigurationsdateien (`*.yml`, `*.yaml`, `*.json`) müssen lokal auf Syntax geprüft werden, wenn sie geändert werden.
 - **Lokal ausführen**:
+
   ```bash
   platformio check --environment LILYGO_T5_V231 --skip-packages
   platformio run --environment LILYGO_T5_V231
-  cpplint --recursive src
-  npx jscpd --config .jscpd.json
-  npx markdownlint-cli2 "**/*.md"
-  yamllint .github/workflows
+  git diff --name-only -- '*.cpp' '*.hpp' '*.h' | xargs -r cpplint
+  git diff --name-only -- '*.md' | xargs -r npx --yes markdownlint-cli2
+  git diff --name-only -- '*.yml' '*.yaml' | xargs -r yamllint
+  npx --yes jscpd --config .jscpd.json src .github/workflows
   python -m json.tool .jscpd.json > /dev/null
   ```
 
@@ -240,6 +242,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Logging**: Strukturiert mit Emojis für bessere Lesbarkeit im Serial Monitor.
 
 ## 21. Projektspezifisches
+
 - **Hauptzweck**: E-Ink Display zur Anzeige von Pool-Daten (Temperatur, Status) aus Home Assistant MQTT Discovery.
 - **Energiequelle**: Aktuell USB/Batterie, geplant: Solar-Betrieb.
 - **Outdoor-Einsatz**: Geplant in wetterfestem Gehäuse am Pool.

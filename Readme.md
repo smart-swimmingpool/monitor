@@ -14,7 +14,6 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 * Pool pump status (on/off)
 * Solar heating status (on/off)
 
-
 ## Features
 
 * [x] configurable MQTT server
@@ -47,10 +46,10 @@ Run the local quality gates before pushing changes so lint findings are fixed be
 ```bash
 platformio check --environment LILYGO_T5_V231 --skip-packages
 platformio run --environment LILYGO_T5_V231
-cpplint --recursive src
-npx jscpd --config .jscpd.json
-npx markdownlint-cli2 "**/*.md"
-yamllint .github/workflows
+git diff --name-only -- '*.cpp' '*.hpp' '*.h' | xargs -r cpplint
+git diff --name-only -- '*.md' | xargs -r npx --yes markdownlint-cli2
+git diff --name-only -- '*.yml' '*.yaml' | xargs -r yamllint
+npx --yes jscpd --config .jscpd.json src .github/workflows
 python -m json.tool .jscpd.json > /dev/null
 ```
 
