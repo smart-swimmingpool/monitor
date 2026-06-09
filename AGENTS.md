@@ -74,9 +74,12 @@ Architekturregeln:
   ```bash
   platformio check --environment LILYGO_T5_V231 --skip-packages
   platformio run --environment LILYGO_T5_V231
-  git diff --name-only -- '*.cpp' '*.hpp' '*.h' | xargs -r cpplint
-  git diff --name-only -- '*.md' | xargs -r npx --yes markdownlint-cli2
-  git diff --name-only -- '*.yml' '*.yaml' | xargs -r yamllint
+  mapfile -t cpp_files < <(git diff --name-only -- '*.cpp' '*.hpp' '*.h')
+  ((${#cpp_files[@]})) && cpplint "${cpp_files[@]}"
+  mapfile -t md_files < <(git diff --name-only -- '*.md')
+  ((${#md_files[@]})) && npx --yes markdownlint-cli2 "${md_files[@]}"
+  mapfile -t yaml_files < <(git diff --name-only -- '*.yml' '*.yaml')
+  ((${#yaml_files[@]})) && yamllint "${yaml_files[@]}"
   npx --yes jscpd --config .jscpd.json src .github/workflows
   python -m json.tool .jscpd.json > /dev/null
   ```
