@@ -390,8 +390,7 @@ void print_wakeup_reason() {
       Serial.println("Wakeup caused by ULP program");
       break;
     default:
-      Serial.printf("Wakeup was not caused by deep sleep: %d\n",
-                    wakeup_reason);
+      Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason);
       initDisplay();
       break;
   }
@@ -400,7 +399,7 @@ void print_wakeup_reason() {
 void setup() {
   Serial.begin(115200);
   while (!Serial) {
-    {}  // wait for serial port to connect. Needed for native USB port only
+    delay(1);  // wait for serial port to connect. Needed for native USB port only
   }
 
   Serial.println(F(" ------------------------------------- "));
