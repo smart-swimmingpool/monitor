@@ -47,8 +47,8 @@ jobs:
             // count rows that look like actual outdated package entries.
             const dataRows = lines.filter(l => /^[\w.-]/.test(l) && !/^Package/i.test(l) && !/^-+$/.test(l));
 
+            if (dataRows.length === 0) {
               console.log('All packages are up to date.');
-              console.log('✅ All packages are up to date.');
               return;
             }
 
