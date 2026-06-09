@@ -399,7 +399,7 @@ void print_wakeup_reason() {
 void setup() {
   Serial.begin(115200);
   while (!Serial) {
-    continue;  // wait for serial port to connect. Needed for native USB port only
+    ;  // wait for serial port to connect. Needed for native USB port only
   }
 
   Serial.println(F(" ------------------------------------- "));
