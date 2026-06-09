@@ -12,6 +12,17 @@ Der Agent:
 - vermeidet unsichere dynamische Allokationen und ungeprüfte Heap-Nutzung.
 - folgt einem CI-regelbasierten Prozess (Build + Tests + Lint).
 
+## 1b. Empfohlene Hermes-Skills für dieses Repo
+
+Für größere oder riskantere Änderungen in diesem Repository sollten diese Skills geladen werden:
+- `monitor-migration-workflow` — projektbezogener Umbrella-Workflow für Home-Assistant-/CI-Migrationen.
+- `writing-plans` — wenn eine Änderung in mehrere kleine, überprüfbare Schritte zerlegt werden soll.
+- `test-driven-development` — wenn Firmware- oder Parser-Logik geändert wird.
+- `systematic-debugging` — wenn Build-, MQTT- oder Laufzeitfehler untersucht werden.
+- `requesting-code-review` — vor Commit/Push für Qualitäts- und Sicherheitschecks.
+- `subagent-driven-development` — für größere, klar trennbare Aufgaben.
+- `local-service-update-workflow` — wenn PlatformIO/CI/Update-Checks angepasst werden.
+
 ## 2. Zielplattformen & Framework
 
 - Plattform: ESP32 (LILYGO T5 V231 mit E-Ink Display); Framework: Arduino.
@@ -48,9 +59,15 @@ Architekturregeln:
 
 ## 5. Linting & Format
 
-- Lint: `cppcheck` oder vergleichbare Tools.
-- Duplicate Code Detection: JSCPD mit 30% Threshold, exclude `docs/` und `Gx*/` Verzeichnisse.
-- CI: Build (`pio run`), Tests falls vorhanden, Lint-Checks grün.
+- **Static Analysis**: `platformio check --environment LILYGO_T5_V231 --skip-packages` (Primary Quality Check, CI-pflichtig).
+- **Lint**: `cppcheck` oder vergleichbare Tools (optional, nicht CI-pflichtig).
+- **Duplicate Code Detection**: JSCPD mit 30% Threshold, exclude `docs/` und `Gx*/` Verzeichnisse.
+- **CI**: Jeder Push/PR durchläuft `platformio check` + Build (`pio run`) in `.github/workflows/plaform.io.yml`.
+- **Lokal ausführen**:
+  ```bash
+  platformio check --environment LILYGO_T5_V231 --skip-packages
+  platformio run --environment LILYGO_T5_V231
+  ```
 
 ## 6. Commit-Konventionen (Conventional Commits)
 
