@@ -40,6 +40,20 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 * [Software Guide](docs/software-guide.md)
 * [Home Assistant Migration Notes](docs/home-assistant-migration.md)
 
+## Quality Checks
+
+Run the local quality gates before pushing changes so lint findings are fixed before CI:
+
+```bash
+platformio check --environment LILYGO_T5_V231 --skip-packages
+platformio run --environment LILYGO_T5_V231
+cpplint --recursive src
+npx jscpd --config .jscpd.json
+npx markdownlint-cli2 "**/*.md"
+yamllint .github/workflows
+python -m json.tool .jscpd.json > /dev/null
+```
+
 ## Discussions
 
 see: <https://github.com/smart-swimmingpool/smart-swimmingpool.github.io/discussions>

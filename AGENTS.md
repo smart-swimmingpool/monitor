@@ -63,10 +63,20 @@ Architekturregeln:
 - **Lint**: `cppcheck` oder vergleichbare Tools (optional, nicht CI-pflichtig).
 - **Duplicate Code Detection**: JSCPD mit 30% Threshold, exclude `docs/` und `Gx*/` Verzeichnisse.
 - **CI**: Jeder Push/PR durchläuft `platformio check` + Build (`pio run`) in `.github/workflows/plaform.io.yml`.
+- **Quality-Check-Gate**: Vor jedem Commit/PR immer zuerst die lokalen Quality Checks ausführen und erkannte Findings direkt beheben, statt sie erst in CI zu entdecken.
+- **Super-Linter-Parität**:
+  - `CPPLINT.cfg` bleibt im Repository-Root; nicht nach `.github/linters/` verschieben.
+  - Markdown-Dateien müssen ohne Trailing Spaces, mit genau einer H1 pro Datei und ohne nackte URLs gepflegt werden.
+  - Workflow- und Konfigurationsdateien (`*.yml`, `*.yaml`, `*.json`) müssen lokal auf Syntax geprüft werden, wenn sie geändert werden.
 - **Lokal ausführen**:
   ```bash
   platformio check --environment LILYGO_T5_V231 --skip-packages
   platformio run --environment LILYGO_T5_V231
+  cpplint --recursive src
+  npx jscpd --config .jscpd.json
+  npx markdownlint-cli2 "**/*.md"
+  yamllint .github/workflows
+  python -m json.tool .jscpd.json > /dev/null
   ```
 
 ## 6. Commit-Konventionen (Conventional Commits)
