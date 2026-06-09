@@ -38,11 +38,12 @@ jobs:
             const existingIssues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open',
-              title: issueTitle
+              state: 'open'
             });
 
-            if (existingIssues.data.length === 0) {
+            const hasExistingIssue = existingIssues.data.some(issue => issue.title === issueTitle);
+
+            if (!hasExistingIssue) {
               await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
