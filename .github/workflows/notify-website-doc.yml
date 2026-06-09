@@ -7,6 +7,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - docs/**
+      - README.md
+      - CHANGELOG.md
+      - .github/workflows/notify-website-doc.yml
+
 jobs:
   build:
     name: Dispatch to `website` repository for regeneration of documents

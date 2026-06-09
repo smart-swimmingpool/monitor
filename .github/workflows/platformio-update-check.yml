@@ -1,0 +1,53 @@
+name: PlatformIO Update Check
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install PlatformIO
+        run: |
+          python -m pip install --upgrade pip
+          pip install platformio
+
+      - name: Check for updates
+        run: |
+          pio pkg update
+          pio pkg outdated
+
+      - name: Create issue if updates are available
+        if: failure()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const issueTitle = 'PlatformIO Updates Available';
+            const issueBody = 'Es sind Updates für PlatformIO-Abhängigkeiten verfügbar. Bitte überprüfen und aktualisieren.';
+
+            const existingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              title: issueTitle
+            });
+
+            if (existingIssues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issueTitle,
+                body: issueBody,
+                labels: ['enhancement', 'dependencies']
+              });
+            }
