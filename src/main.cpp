@@ -317,9 +317,11 @@ void showSetupScreen() {
   displayText(DEVICE_NAME, 110, GxEPD_ALIGN_CENTER);
   display.update();
 
-  // Remove all preferences under the opened namespace
+  // Reset all preferences (clear keys, but keep namespace open).
+  // Do NOT call preferences.end() here — if the portal times out without saving,
+  // setup() continues with preferences.get*/put* calls and would hit defaults
+  // or fail silently with a closed namespace.
   preferences.clear();
-  preferences.end();
 }
 
 void showWiFiConnectionFailedScreen() {
