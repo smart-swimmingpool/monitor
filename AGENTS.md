@@ -116,15 +116,15 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 
 ## 11. MQTT & Kommunikation
 
-- **Homie 3.0 Convention**: Pool Monitor folgt Homie-IoT-Standard.
-- **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status).
+- **Home Assistant MQTT Topics**: Pool Monitor abonniert feste HA-State-Topics des pool-controllers (kein Homie Discovery).
+- **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status) via HA-State-Topics.
 - **Connection Pattern**: 
   1. Verbinden
-  2. Subscribe to topics
+  2. Subscribe to 5 fixed HA state topics
   3. Warten auf Nachrichten (mit Timeout)
   4. Disconnect vor Sleep
 - **Offline-Betrieb**: Graceful degradation bei fehlender MQTT-Verbindung, alte Daten anzeigen.
-- **Buffer-Größen**: `MQTT_TOPIC_BUFFER_SIZE = 64` für Topic-Strings.
+- **Buffer-Größen**: snprintf-Puffer für Formatierung (50-64 Bytes).
 
 ## 12. E-Ink Display
 
