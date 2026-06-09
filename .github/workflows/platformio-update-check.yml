@@ -22,18 +22,48 @@ jobs:
           python -m pip install --upgrade pip
           pip install platformio
 
-      - name: Check for updates
-        run: |
-          pio pkg update
-          pio pkg outdated
-
-      - name: Create issue if updates are available
-        if: failure()
+      - name: Check for outdated packages and create issue
         uses: actions/github-script@v9
         with:
           script: |
+            const { execSync } = require('child_process');
+
+            // Update package index (always runs first)
+            execSync('pio pkg update', { stdio: 'inherit' });
+
+            // Capture outdated output — pio pkg outdated returns 0 even when
+            // packages are outdated, so we must parse the output ourselves.
+            let output;
+            try {
+              output = execSync('pio pkg outdated', { encoding: 'utf-8' });
+            } catch (e) {
+              // Command failed entirely — still try to use its stdout if any
+              output = e.stdout || '';
+            }
+
+            const lines = output.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+            // Skip header lines (Package / Current / Latest / dashes) and
+            // count rows that look like actual outdated package entries.
+            const dataRows = lines.filter(l => /^[\w.-]/.test(l) && !/^Package/i.test(l) && !/^-+$/.test(l));
+
+              console.log('All packages are up to date.');
+              console.log('✅ All packages are up to date.');
+              return;
+            }
+
+            console.log(dataRows.length + ' outdated package(s) found:');
+
             const issueTitle = 'PlatformIO Updates Available';
-            const issueBody = 'Es sind Updates für PlatformIO-Abhängigkeiten verfügbar. Bitte überprüfen und aktualisieren.';
+            const body = [
+              'Folgende PlatformIO-Abhängigkeiten sind veraltet:',
+              '',
+              '```',
+              ...dataRows,
+              '```',
+              '',
+              'Bitte `pio pkg update` ausführen und die Änderungen committen.'
+            ].join('\n');
 
             const existingIssues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -41,14 +71,23 @@ jobs:
               state: 'open'
             });
 
-            const hasExistingIssue = existingIssues.data.some(issue => issue.title === issueTitle);
+            const existing = existingIssues.data.find(issue => issue.title === issueTitle);
 
-            if (!hasExistingIssue) {
-              await github.rest.issues.create({
+            if (existing) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.number,
+                body
+              });
+              console.log(`Updated existing issue #${existing.number}`);
+            } else {
+              const newIssue = await github.rest.issues.create({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 title: issueTitle,
-                body: issueBody,
+                body,
                 labels: ['enhancement', 'dependencies']
               });
+              console.log(`Created issue #${newIssue.data.number}`);
             }
