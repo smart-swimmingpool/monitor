@@ -45,6 +45,7 @@ Run the local quality gates before pushing changes so lint findings are fixed be
 
 * Install Python-based linters once with `python3 -m pip install --user cpplint yamllint`
 * `markdownlint-cli2` and `jscpd` are executed on demand via `npx`
+* Run the following snippet in Bash
 
 ```bash
 platformio check --environment LILYGO_T5_V231 --skip-packages
