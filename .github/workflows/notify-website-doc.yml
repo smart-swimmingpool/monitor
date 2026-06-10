@@ -7,14 +7,26 @@ on:
   push:
     branches:
       - main
+    paths:
+      - docs/**
+      - Readme.md
+      - CHANGELOG.md
+      - .github/workflows/notify-website-doc.yml
+
 jobs:
   build:
     name: Dispatch to `website` repository for regeneration of documents
     runs-on: ubuntu-latest
     steps:
       - name: Emit repository_dispatch
+        id: dispatch
         uses: peter-evans/repository-dispatch@v4
+        continue-on-error: true
         with:
           token: ${{ secrets.HUGO_DEPLOY_TOKEN }}
           repository: smart-swimmingpool/website
           event-type: doc_update
+      - name: Warn on failed dispatch
+        if: steps.dispatch.outcome == 'failure'
+        run: |
+          echo "::warning::repository_dispatch to smart-swimmingpool/website failed (check HUGO_DEPLOY_TOKEN permissions/validity)."

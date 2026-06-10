@@ -25,9 +25,8 @@ menu:
 - juerd/ESP-WiFiSettings
 - olikraus/U8g2
 - olikraus/U8g2_for_Adafruit_GFX
-- knolleary/PubSubClient
+- hmueller01/PubSubClient3
 - arduino-libraries/NTPClient
-- madpilot/mDNSResolver
 - jchristensen/Timezone
 
 Many thanks to maintainers of these libraries!

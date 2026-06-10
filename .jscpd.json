@@ -4,9 +4,11 @@
   "ignore": [
     "**/node_modules/**",
     "**/.git/**",
+    "**/.cache/**",
+    "**/.clangd/**",
+    "**/compile_commands.json",
     "**/Gx*/**",
     "**/docs/**"
   ],
   "absolute": true
 }
-
