@@ -5,3 +5,4 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 _codeql_detected_source_root
+.cache/
