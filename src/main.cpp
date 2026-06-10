@@ -19,6 +19,7 @@
 #include <WiFiSettings.h>
 #include <Preferences.h>
 #include <ESPmDNS.h>
+#include <qrcode.h>
 #include <cctype>
 
 
@@ -308,15 +309,96 @@ void connectMQTT(IPAddress ip) {
 }
 
 
+// Context for QR code display callback (ESP32 framework passes no user data)
+static struct {
+  int16_t x, y;
+  uint8_t scale;
+} _qr_ctx;
+
+/**
+ * Display callback for esp_qrcode_generate — draws modules on the E-Ink display.
+ */
+static void _qrDisplayFunc(esp_qrcode_handle_t qrcode) {
+  int size  = esp_qrcode_get_size(qrcode);
+  int quiet = 4 * _qr_ctx.scale;
+
+  // Quiet zone (white border)
+  display.fillRect(_qr_ctx.x, _qr_ctx.y,
+                   size * _qr_ctx.scale + quiet * 2,
+                   size * _qr_ctx.scale + quiet * 2,
+                   GxEPD_WHITE);
+
+  // Draw modules as black squares
+  for (int qy = 0; qy < size; qy++) {
+    for (int qx = 0; qx < size; qx++) {
+      if (esp_qrcode_get_module(qrcode, qx, qy)) {
+        display.fillRect(_qr_ctx.x + quiet + qx * _qr_ctx.scale,
+                         _qr_ctx.y + quiet + qy * _qr_ctx.scale,
+                         _qr_ctx.scale, _qr_ctx.scale, GxEPD_BLACK);
+      }
+    }
+  }
+}
+
+/**
+ * Draw a QR code on the display at the given position.
+ *
+ * Uses the ESP32 framework's built-in QR code library (esp_qrcode).
+ *
+ * @param text  Text/URL to encode (e.g. "WIFI:T:nopass;S:pool-monitor;;")
+ * @param x     Top-left x position
+ * @param y     Top-left y position
+ * @param scale Pixel size per QR module (2 = well-scannable on 2.13" E-Ink)
+ */
+static void drawQrCode(const char* text, int16_t x, int16_t y, uint8_t scale) {
+  _qr_ctx.x = x;
+  _qr_ctx.y = y;
+  _qr_ctx.scale = scale;
+
+  esp_qrcode_config_t cfg = ESP_QRCODE_CONFIG_DEFAULT();
+  cfg.display_func       = _qrDisplayFunc;
+  cfg.max_qrcode_version = 3;   // enough for ~55 bytes of alphanumeric data
+  cfg.qrcode_ecc_level   = ESP_QRCODE_ECC_LOW;
+
+  if (esp_qrcode_generate(&cfg, text) != ESP_OK) {
+    Serial.println("⚠️\tQR code generation failed");
+  }
+}
+
 void showSetupScreen() {
-  Serial.println("⚙️\tsetup device");
+  Serial.println("⚙️\tConfiguration portal active");
+
+  // Build the WiFi QR code string
+  // Format: WIFI:T:<security>;S:<ssid>;P:<password>;;
+  String qrContent = "WIFI:T:nopass;S:" + String(DEVICE_NAME) + ";;";
+
+  String apIP = WiFi.softAPIP().toString();
 
   display.fillScreen(GxEPD_WHITE);
+  display.setRotation(3);
+
+  // --- QR code (right side) ---
+  // Version 2 at scale=2: 25 modules × 2 + 8 quiet = 66×66 px
+  drawQrCode(qrContent.c_str(), display.width() - 66 - 5, (display.height() - 66) / 2, 2);
+
+  // --- Text info (left side) ---
   display.setFont(&FreeSans9pt7b);
-  displayText("Pool Monitor", 18, GxEPD_ALIGN_LEFT);
-  displayText("*** Setup ***", 50, GxEPD_ALIGN_CENTER);
-  displayText("Connect to WiFi & add data:", 80, GxEPD_ALIGN_CENTER);
-  displayText(DEVICE_NAME, 110, GxEPD_ALIGN_CENTER);
+  displayText("Pool Monitor", 14, GxEPD_ALIGN_LEFT, 3);
+  display.drawLine(3, 20, display.width() - 70, 20, GxEPD_BLACK);
+
+  display.setFont(&FreeSans9pt7b);
+  displayText("Connect to WiFi:", 36, GxEPD_ALIGN_LEFT, 3);
+
+  display.setFont(&FreeSansBold9pt7b);
+  displayText(DEVICE_NAME, 52, GxEPD_ALIGN_LEFT, 3);
+
+  display.setFont(&FreeSans9pt7b);
+  String ipLine = "IP: " + apIP;
+  displayText(ipLine.c_str(), 70, GxEPD_ALIGN_LEFT, 3);
+
+  display.setFont(&FreeMono9pt7b);
+  displayText("Scan QR to connect", 88, GxEPD_ALIGN_LEFT, 3);
+
   display.update();
 
   // Reset all preferences (clear keys, but keep namespace open).
@@ -480,16 +562,15 @@ void setup() {
     Serial.println("🛑\tMQTT server not reachable - starting configuration portal");
     Serial.println("📡\tConnect to the '" + String(DEVICE_NAME) + "' access point to configure MQTT settings");
 
-    // Show MQTT error message on the display
+    // Show MQTT error briefly — showSetupScreen() (called by portal)
+    // will overwrite this with the full AP info + QR code.
     display.fillScreen(GxEPD_WHITE);
     display.setRotation(3);
     display.setFont(&FreeSans9pt7b);
-    displayText("Pool Monitor", 18, GxEPD_ALIGN_LEFT);
-    displayText("*** MQTT Error ***", 60, GxEPD_ALIGN_CENTER);
-    displayText("MQTT server not", 90, GxEPD_ALIGN_CENTER);
-    displayText("reachable.", 105, GxEPD_ALIGN_CENTER);
-    displayText("Connect to WiFi &", 125, GxEPD_ALIGN_CENTER);
-    displayText("configure.", 140, GxEPD_ALIGN_CENTER);
+    displayText("Pool Monitor", 14, GxEPD_ALIGN_LEFT, 3);
+    display.drawLine(3, 20, display.width() - 3, 20, GxEPD_BLACK);
+    displayText("*** MQTT Error ***", 55, GxEPD_ALIGN_CENTER);
+    displayText("Starting config...", 80, GxEPD_ALIGN_CENTER);
     display.update();
 
     // Start the captive portal for reconfiguration.
