@@ -18,6 +18,7 @@
 #include <SPIFFS.h>
 #include <WiFiSettings.h>
 #include <Preferences.h>
+#include <ESPmDNS.h>
 #include <cctype>
 
 
@@ -350,17 +351,26 @@ void showWiFiConnectedScreen() {
   IPAddress wIP = WiFi.localIP();
   Serial.printf("WiFi IP address: %u.%u.%u.%u\n", wIP[0], wIP[1], wIP[2], wIP[3]);
 
+  // Advertise via mDNS so the device is discoverable as pool-monitor.local
+  if (MDNS.begin(DEVICE_NAME)) {
+    Serial.printf("📡\tmDNS responder started: %s.local\n", DEVICE_NAME);
+  }
+
   Serial.printf("Connecting to %s\n", mqtt_server.c_str());
   WiFi.hostByName(mqtt_server.c_str(), remote);
 
   if (remote != INADDR_NONE) {
     Serial.printf("Connecting to mqtt server: %s (IP: %u.%u.%u.%u)\n", mqtt_server.c_str(), remote[0], remote[1],
                   remote[2], remote[3]);
-
-    connectMQTT(remote);
-    updateDisplay();
   } else {
-    Serial.printf("Could not resolve hostname: %s\n", mqtt_server.c_str());
+    Serial.printf("Could not resolve hostname: %s, connecting via hostname string\n", mqtt_server.c_str());
+  }
+
+  // Always attempt MQTT connection — connectMQTT() uses the hostname string internally
+  // and PubSubClient resolves DNS on its own, so a pre-resolution failure is not fatal.
+  connectMQTT(remote);
+  if (mqttClient.connected()) {
+    updateDisplay();
   }
 }
 
@@ -459,9 +469,35 @@ void setup() {
   mqtt_server     = WiFiSettings.string("mqtt_server", "hostname", "MQTT Hostname");
   mqtt_server_port = WiFiSettings.integer("mqtt_port", 1, 65535, 1883, "MQTT Port");
 
-  // Connect to WiFi with a timeout of 30 seconds
+  // Connect to WiFi with a timeout of 45 seconds
   // Launches the portal if the connection failed
   WiFiSettings.connect(true, 45);
+
+  // If MQTT is not reachable, stay awake and open the configuration portal
+  // so the user can fix settings (MQTT hostname, port) instead of cycling
+  // through sleep/wake/fail loops.
+  if (!mqttClient.connected()) {
+    Serial.println("🛑\tMQTT server not reachable - starting configuration portal");
+    Serial.println("📡\tConnect to the '" + String(DEVICE_NAME) + "' access point to configure MQTT settings");
+
+    // Show MQTT error message on the display
+    display.fillScreen(GxEPD_WHITE);
+    display.setRotation(3);
+    display.setFont(&FreeSans9pt7b);
+    displayText("Pool Monitor", 18, GxEPD_ALIGN_LEFT);
+    displayText("*** MQTT Error ***", 60, GxEPD_ALIGN_CENTER);
+    displayText("MQTT server not", 90, GxEPD_ALIGN_CENTER);
+    displayText("reachable.", 105, GxEPD_ALIGN_CENTER);
+    displayText("Connect to WiFi &", 125, GxEPD_ALIGN_CENTER);
+    displayText("configure.", 140, GxEPD_ALIGN_CENTER);
+    display.update();
+
+    // Start the captive portal for reconfiguration.
+    // This loops indefinitely until the user saves new settings,
+    // which triggers the onConfigSaved callback → ESP.restart().
+    WiFiSettings.portal();
+    // Not reached (portal loops forever or restarts)
+  }
 
   // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
   timeClient.begin();
@@ -513,10 +549,12 @@ void setup() {
     mqttClient.disconnect();
   }
 
-  WiFi.disconnect(true);  // Disconnect from the network
-  delay(1);
-  WiFi.mode(WIFI_OFF);    // Switch WiFi off
-  delay(1);
+  // NOTE: No explicit WiFi disconnection here — Deep Sleep powers down the radio
+  // automatically. An explicit disconnect would send DHCPRELEASE to the router,
+  // removing the device from the DHCP client table and making it invisible on
+  // the network between wake cycles. Letting Deep Sleep handle the power-down
+  // preserves the DHCP lease so the device stays visible (though unresponsive
+  // during sleep) and reuses the same IP on wake.
 
   updateDisplay();
   delay(3000);  // Wait for the display to update
