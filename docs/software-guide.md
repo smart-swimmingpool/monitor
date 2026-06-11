@@ -34,3 +34,15 @@ Many thanks to maintainers of these libraries!
 ## Defines
 
 ## Configuration
+
+## Changelog
+
+### 2026-06-10 — DNS failover, mDNS, QR code portal, and 5-minute timeout
+
+- **DNS failover:** MQTT connection is always attempted even when the hostname cannot be resolved via DNS. PubSubClient resolves DNS internally.
+- **mDNS:** Device registers as `pool-monitor.local` on the local network.
+- **WiFi disconnect removed:** Explicit `WiFi.disconnect(true)` before deep sleep was removed so the DHCP lease is preserved. The device stays visible in the router table.
+- **MQTT portal with QR code:** On MQTT failure, a configuration portal starts. The display shows SSID, AP IP, and a QR code.
+- **5-minute timeout:** The portal stays active for a maximum of 5 minutes. Without user interaction, the device enters deep sleep and retries the connection on the next wake cycle.
+- **upload_speed:** Reduced to 115200 baud for compatibility with older ESP32 rev1.0 hardware.
+- **QR code library:** Uses ESP32 built-in `esp_qrcode` — no additional dependency required.

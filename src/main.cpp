@@ -18,6 +18,8 @@
 #include <SPIFFS.h>
 #include <WiFiSettings.h>
 #include <Preferences.h>
+#include <ESPmDNS.h>
+#include <qrcode.h>
 #include <cctype>
 
 
@@ -307,15 +309,96 @@ void connectMQTT(IPAddress ip) {
 }
 
 
+// Context for QR code display callback (ESP32 framework passes no user data)
+static struct {
+  int16_t x, y;
+  uint8_t scale;
+} _qr_ctx;
+
+/**
+ * Display callback for esp_qrcode_generate — draws modules on the E-Ink display.
+ */
+static void _qrDisplayFunc(esp_qrcode_handle_t qrcode) {
+  int size  = esp_qrcode_get_size(qrcode);
+  int quiet = 4 * _qr_ctx.scale;
+
+  // Quiet zone (white border)
+  display.fillRect(_qr_ctx.x, _qr_ctx.y,
+                   size * _qr_ctx.scale + quiet * 2,
+                   size * _qr_ctx.scale + quiet * 2,
+                   GxEPD_WHITE);
+
+  // Draw modules as black squares
+  for (int qy = 0; qy < size; qy++) {
+    for (int qx = 0; qx < size; qx++) {
+      if (esp_qrcode_get_module(qrcode, qx, qy)) {
+        display.fillRect(_qr_ctx.x + quiet + qx * _qr_ctx.scale,
+                         _qr_ctx.y + quiet + qy * _qr_ctx.scale,
+                         _qr_ctx.scale, _qr_ctx.scale, GxEPD_BLACK);
+      }
+    }
+  }
+}
+
+/**
+ * Draw a QR code on the display at the given position.
+ *
+ * Uses the ESP32 framework's built-in QR code library (esp_qrcode).
+ *
+ * @param text  Text/URL to encode (e.g. "WIFI:T:nopass;S:pool-monitor;;")
+ * @param x     Top-left x position
+ * @param y     Top-left y position
+ * @param scale Pixel size per QR module (2 = well-scannable on 2.13" E-Ink)
+ */
+static void drawQrCode(const char* text, int16_t x, int16_t y, uint8_t scale) {
+  _qr_ctx.x = x;
+  _qr_ctx.y = y;
+  _qr_ctx.scale = scale;
+
+  esp_qrcode_config_t cfg = ESP_QRCODE_CONFIG_DEFAULT();
+  cfg.display_func       = _qrDisplayFunc;
+  cfg.max_qrcode_version = 3;   // enough for ~55 bytes of alphanumeric data
+  cfg.qrcode_ecc_level   = ESP_QRCODE_ECC_LOW;
+
+  if (esp_qrcode_generate(&cfg, text) != ESP_OK) {
+    Serial.println("⚠️\tQR code generation failed");
+  }
+}
+
 void showSetupScreen() {
-  Serial.println("⚙️\tsetup device");
+  Serial.println("⚙️\tConfiguration portal active");
+
+  // Build the WiFi QR code string
+  // Format: WIFI:T:<security>;S:<ssid>;P:<password>;;
+  String qrContent = "WIFI:T:nopass;S:" + String(DEVICE_NAME) + ";;";
+
+  String apIP = WiFi.softAPIP().toString();
 
   display.fillScreen(GxEPD_WHITE);
+  display.setRotation(3);
+
+  // --- QR code (right side) ---
+  // Version 2 at scale=2: 25 modules × 2 + 8 quiet = 66×66 px
+  drawQrCode(qrContent.c_str(), display.width() - 66 - 5, (display.height() - 66) / 2, 2);
+
+  // --- Text info (left side) ---
   display.setFont(&FreeSans9pt7b);
-  displayText("Pool Monitor", 18, GxEPD_ALIGN_LEFT);
-  displayText("*** Setup ***", 50, GxEPD_ALIGN_CENTER);
-  displayText("Connect to WiFi & add data:", 80, GxEPD_ALIGN_CENTER);
-  displayText(DEVICE_NAME, 110, GxEPD_ALIGN_CENTER);
+  displayText("Pool Monitor", 14, GxEPD_ALIGN_LEFT, 3);
+  display.drawLine(3, 20, display.width() - 70, 20, GxEPD_BLACK);
+
+  display.setFont(&FreeSans9pt7b);
+  displayText("Connect to WiFi:", 36, GxEPD_ALIGN_LEFT, 3);
+
+  display.setFont(&FreeSansBold9pt7b);
+  displayText(DEVICE_NAME, 52, GxEPD_ALIGN_LEFT, 3);
+
+  display.setFont(&FreeSans9pt7b);
+  String ipLine = "IP: " + apIP;
+  displayText(ipLine.c_str(), 70, GxEPD_ALIGN_LEFT, 3);
+
+  display.setFont(&FreeMono9pt7b);
+  displayText("Scan QR to connect", 88, GxEPD_ALIGN_LEFT, 3);
+
   display.update();
 
   // Reset all preferences (clear keys, but keep namespace open).
@@ -350,17 +433,26 @@ void showWiFiConnectedScreen() {
   IPAddress wIP = WiFi.localIP();
   Serial.printf("WiFi IP address: %u.%u.%u.%u\n", wIP[0], wIP[1], wIP[2], wIP[3]);
 
+  // Advertise via mDNS so the device is discoverable as pool-monitor.local
+  if (MDNS.begin(DEVICE_NAME)) {
+    Serial.printf("📡\tmDNS responder started: %s.local\n", DEVICE_NAME);
+  }
+
   Serial.printf("Connecting to %s\n", mqtt_server.c_str());
   WiFi.hostByName(mqtt_server.c_str(), remote);
 
   if (remote != INADDR_NONE) {
     Serial.printf("Connecting to mqtt server: %s (IP: %u.%u.%u.%u)\n", mqtt_server.c_str(), remote[0], remote[1],
                   remote[2], remote[3]);
-
-    connectMQTT(remote);
-    updateDisplay();
   } else {
-    Serial.printf("Could not resolve hostname: %s\n", mqtt_server.c_str());
+    Serial.printf("Could not resolve hostname: %s, connecting via hostname string\n", mqtt_server.c_str());
+  }
+
+  // Always attempt MQTT connection — connectMQTT() uses the hostname string internally
+  // and PubSubClient resolves DNS on its own, so a pre-resolution failure is not fatal.
+  connectMQTT(remote);
+  if (mqttClient.connected()) {
+    updateDisplay();
   }
 }
 
@@ -459,9 +551,53 @@ void setup() {
   mqtt_server     = WiFiSettings.string("mqtt_server", "hostname", "MQTT Hostname");
   mqtt_server_port = WiFiSettings.integer("mqtt_port", 1, 65535, 1883, "MQTT Port");
 
-  // Connect to WiFi with a timeout of 30 seconds
+  // Connect to WiFi with a timeout of 45 seconds
   // Launches the portal if the connection failed
   WiFiSettings.connect(true, 45);
+
+  // If MQTT is unreachable, start the configuration portal with a 5-minute
+  // timeout so the user has time to fix settings (wrong hostname, port, etc.).
+  // If nobody interacts, the device goes to deep sleep to save battery and
+  // retries MQTT on the next wake cycle.  Saving the config triggers a restart
+  // (via onConfigSaved), which effectively restarts the 5-minute countdown
+  // on the next boot if MQTT is still unreachable.
+  if (!mqttClient.connected()) {
+    Serial.println("🛑\tMQTT server not reachable - starting configuration portal (5 min timeout)");
+    Serial.println("📡\tConnect to the '" + String(DEVICE_NAME) + "' access point to configure MQTT settings");
+
+    // Show MQTT error briefly — showSetupScreen() (called by portal)
+    // will overwrite this with the full AP info + QR code.
+    display.fillScreen(GxEPD_WHITE);
+    display.setRotation(3);
+    display.setFont(&FreeSans9pt7b);
+    displayText("Pool Monitor", 14, GxEPD_ALIGN_LEFT, 3);
+    display.drawLine(3, 20, display.width() - 3, 20, GxEPD_BLACK);
+    displayText("*** MQTT Error ***", 55, GxEPD_ALIGN_CENTER);
+    displayText("Starting config...", 80, GxEPD_ALIGN_CENTER);
+    display.update();
+
+    // Portal timeout: 5 minutes of inactivity → deep sleep.
+    // This prevents indefinite battery drain while still giving the user
+    // a reasonable window to connect and save new settings.
+    WiFiSettings.onPortalWaitLoop = []() {
+      static unsigned long portalStart = millis();
+      if (millis() - portalStart > 300000) {  // 5 minutes
+        Serial.println("😴\tPortal timeout — going to deep sleep, will retry MQTT on next wake");
+        preferences.end();
+        SPIFFS.end();
+        display.powerDown();
+        esp_deep_sleep_start();  // never returns
+      }
+    };
+
+    // Start the captive portal for reconfiguration.
+    // This loops until one of:
+    //   - user saves → onConfigSaved callback → ESP.restart()
+    //   - 5 min timeout → esp_deep_sleep_start()
+    //   - user clicks restart → onRestart callback → ESP.restart()
+    WiFiSettings.portal();
+    // Not reached
+  }
 
   // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
   timeClient.begin();
@@ -513,10 +649,12 @@ void setup() {
     mqttClient.disconnect();
   }
 
-  WiFi.disconnect(true);  // Disconnect from the network
-  delay(1);
-  WiFi.mode(WIFI_OFF);    // Switch WiFi off
-  delay(1);
+  // NOTE: No explicit WiFi disconnection here — Deep Sleep powers down the radio
+  // automatically. An explicit disconnect would send DHCPRELEASE to the router,
+  // removing the device from the DHCP client table and making it invisible on
+  // the network between wake cycles. Letting Deep Sleep handle the power-down
+  // preserves the DHCP lease so the device stays visible (though unresponsive
+  // during sleep) and reuses the same IP on wake.
 
   updateDisplay();
   delay(3000);  // Wait for the display to update
