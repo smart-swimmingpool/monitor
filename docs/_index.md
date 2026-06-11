@@ -29,4 +29,4 @@ menu:
 
 {{< figure library="true" src="pool-monitor-prototype.jpg" title="Prototype of Pool Monitor" lightbox="true" >}}
 
-[![Home Assistant MQTT](https://img.shields.io/badge/MQTT-Home%20Assistant-41BDF5.svg)](https://www.home-assistant.io/integrations/mqtt/)
+[![works with Home Assistant](https://img.shields.io/badge/works%20with-Home%20Assistant-41BDF5.svg?logo=home-assistant&logoColor=white "works with Home Assistant")](https://www.home-assistant.io/)

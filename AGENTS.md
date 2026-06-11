@@ -12,11 +12,23 @@ Der Agent:
 - vermeidet unsichere dynamische Allokationen und ungeprüfte Heap-Nutzung.
 - folgt einem CI-regelbasierten Prozess (Build + Tests + Lint).
 
+## 1b. Empfohlene Hermes-Skills für dieses Repo
+
+Für größere oder riskantere Änderungen in diesem Repository sollten diese Skills geladen werden:
+
+- `monitor-migration-workflow` — projektbezogener Umbrella-Workflow für Home-Assistant-/CI-Migrationen.
+- `writing-plans` — wenn eine Änderung in mehrere kleine, überprüfbare Schritte zerlegt werden soll.
+- `test-driven-development` — wenn Firmware- oder Parser-Logik geändert wird.
+- `systematic-debugging` — wenn Build-, MQTT- oder Laufzeitfehler untersucht werden.
+- `requesting-code-review` — vor Commit/Push für Qualitäts- und Sicherheitschecks.
+- `subagent-driven-development` — für größere, klar trennbare Aufgaben.
+- `local-service-update-workflow` — wenn PlatformIO/CI/Update-Checks angepasst werden.
+
 ## 2. Zielplattformen & Framework
 
 - Plattform: ESP32 (LILYGO T5 V231 mit E-Ink Display); Framework: Arduino.
 - PlatformIO: Single-Source für Build-Konfiguration (`platformio.ini`), Projekt-Environments, Lib-Pins.
-- Wichtige Abhängigkeiten: GxEPD (E-Ink), PubSubClient (MQTT), WiFiSettings (Configuration), NTPClient (Time Sync).
+- Wichtige Abhängigkeiten: GxEPD (E-Ink), PubSubClient3 (MQTT), WiFiSettings (Configuration), NTPClient (Time Sync), Home Assistant MQTT Discovery im Zielsystem.
 
 ## 3. Projektstruktur und Architektur
 
@@ -48,9 +60,30 @@ Architekturregeln:
 
 ## 5. Linting & Format
 
-- Lint: `cppcheck` oder vergleichbare Tools.
-- Duplicate Code Detection: JSCPD mit 30% Threshold, exclude `docs/` und `Gx*/` Verzeichnisse.
-- CI: Build (`pio run`), Tests falls vorhanden, Lint-Checks grün.
+- **Static Analysis**: `platformio check --environment LILYGO_T5_V231 --skip-packages` (Primary Quality Check, CI-pflichtig).
+- **Lint**: `cppcheck` oder vergleichbare Tools (optional, nicht CI-pflichtig).
+- **Duplicate Code Detection**: JSCPD mit 30% Threshold, exclude `docs/` und `Gx*/` Verzeichnisse.
+- **CI**: Jeder Push/PR durchläuft `platformio check` + Build (`pio run`) in `.github/workflows/plaform.io.yml`.
+- **Quality-Check-Gate**: Vor jedem Commit/PR immer zuerst die lokalen Quality Checks ausführen und erkannte Findings direkt beheben, statt sie erst in CI zu entdecken.
+- **Super-Linter-Parität**:
+  - `CPPLINT.cfg` bleibt im Repository-Root; nicht nach `.github/linters/` verschieben.
+  - Markdown-Dateien müssen ohne Trailing Spaces, mit genau einer H1 pro Datei und ohne nackte URLs gepflegt werden.
+  - Workflow- und Konfigurationsdateien (`*.yml`, `*.yaml`, `*.json`) müssen lokal auf Syntax geprüft werden, wenn sie geändert werden.
+  - Für lokale Runs werden `cpplint` und `yamllint` per `pip` installiert; `markdownlint-cli2` und `jscpd` können per `npx` direkt ausgeführt werden.
+- **Lokal ausführen**: Änderungen zuerst stagen; die folgende Bash-only Sequenz nutzt `mapfile`, Bash-Arrays und `git diff --cached`.
+
+  ```bash
+  platformio check --environment LILYGO_T5_V231 --skip-packages
+  platformio run --environment LILYGO_T5_V231
+  mapfile -t cpp_files < <(git diff --cached --name-only -- '*.cpp' '*.hpp' '*.h')
+  ((${#cpp_files[@]})) && cpplint "${cpp_files[@]}"
+  mapfile -t md_files < <(git diff --cached --name-only -- '*.md')
+  ((${#md_files[@]})) && npx --yes markdownlint-cli2 "${md_files[@]}"
+  mapfile -t yaml_files < <(git diff --cached --name-only -- '*.yml' '*.yaml')
+  ((${#yaml_files[@]})) && yamllint "${yaml_files[@]}"
+  npx --yes jscpd --config .jscpd.json src .github/workflows
+  python -m json.tool .jscpd.json > /dev/null
+  ```
 
 ## 6. Commit-Konventionen (Conventional Commits)
 
@@ -116,20 +149,15 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 
 ## 11. MQTT & Kommunikation
 
-- **Home Assistant MQTT Discovery**: Pool Monitor folgt den Home-Assistant-State-Topics des Pool-Controllers.
-- **Subscribed Topics**:
-  - `homeassistant/sensor/pool-controller/pool-temp/state`
-  - `homeassistant/sensor/pool-controller/solar-temp/state`
-  - `homeassistant/switch/pool-controller/pool-pump/state`
-  - `homeassistant/switch/pool-controller/solar-pump/state`
-  - `homeassistant/select/pool-controller/mode/state`
-- **Connection Pattern**: 
+- **Home Assistant MQTT Topics**: Der Pool Monitor soll die retained State-Topics des Pool-Controllers konsumieren statt Homie-Discovery zu verwenden.
+- **Subscribed Topics**: Empfangen von Pool-Controller-Daten (Temperatur, Pump-Status, Solar-Status, Betriebsmodus) direkt über HA-Topics.
+- **Connection Pattern**:
   1. Verbinden
-  2. Subscribe to topics
+  2. Subscribe to 5 fixed HA state topics
   3. Warten auf Nachrichten (mit Timeout)
   4. Disconnect vor Sleep
 - **Offline-Betrieb**: Graceful degradation bei fehlender MQTT-Verbindung, alte Daten anzeigen.
-- **Buffer-Größen**: `MQTT_PAYLOAD_BUFFER_SIZE = 128` für eingehende MQTT-State-Payloads.
+- **Buffer-Größen**: snprintf-Puffer für Formatierung (50-64 Bytes).
 
 ## 12. E-Ink Display
 
@@ -141,7 +169,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
   - Pump-Status (on/off)
   - Solar-Status (on/off)
   - Timestamp
-  - Branding (www.smart-swimmingpool.com)
+  - Branding (<www.smart-swimmingpool.com>)
 - **Icons**: U8g2-Fonts für Icons (Pool, Solar Panel).
 - **Energieverbrauch**: Display-Updates sind energieintensiv, sparsam einsetzen.
 
@@ -181,7 +209,7 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - Minimiert, begründet, Version-Pinned in `platformio.ini`.
 - Wichtige Dependencies:
   - GxEPD @ ^3.1.1 (E-Ink Display)
-  - PubSubClient @ ^2.8 (MQTT)
+  - PubSubClient3 @ ^3.1.0 (MQTT)
   - WiFiSettings @ ^3.9.2 (Configuration)
   - NTPClient @ ^3.2.1 (Time Sync)
   - U8g2 @ ^2.35.30 (Icons/Fonts)
@@ -192,8 +220,8 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 - **Branch**: `main` (nicht `master`).
 - **Build-System**: PlatformIO (nicht Arduino IDE).
 - Release: Optimiert, reduziertes Logging.
-- CI: Build, Lint (JSCPD), Format-Checks.
-- **CI-System**: GitHub Actions, konfiguriert in `.github/workflows/platform.io.yml` und `.github/workflows/linter.yml`.
+- CI: Build, Lint (JSCPD), Format-Checks; PlatformIO-Check + Build in CI.
+- **CI-System**: GitHub Actions, konfiguriert in `.github/workflows/plaform.io.yml`, `.github/workflows/linter.yml` und `.github/workflows/codeql-analysis.yml`.
 
 ## 19. Antipatterns (verboten)
 
@@ -219,9 +247,9 @@ Commit Messages müssen dem Format entsprechen, damit automatische Changelog-Gen
 
 ## 21. Projektspezifisches
 
-- **Hauptzweck**: E-Ink Display zur Anzeige von Pool-Daten (Temperatur, Status).
+- **Hauptzweck**: E-Ink Display zur Anzeige von Pool-Daten (Temperatur, Status) aus Home Assistant MQTT Discovery.
 - **Energiequelle**: Aktuell USB/Batterie, geplant: Solar-Betrieb.
 - **Outdoor-Einsatz**: Geplant in wetterfestem Gehäuse am Pool.
 - **Smart Swimmingpool Ecosystem**: Teil des Smart-Swimmingpool-Projekts, kommuniziert mit Pool-Controller.
-- **Home-Assistant-kompatibel**: Nutzt Home Assistant MQTT State Topics des Pool-Controllers.
+- **Home-Assistant-kompatibel**: Zielintegration ist Home Assistant MQTT Discovery; Homie ist nur noch Altlast.
 - **Dokumentation**: User Guide, Hardware Guide, Software Guide in `docs/`.

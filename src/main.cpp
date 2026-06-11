@@ -1,12 +1,13 @@
+// Copyright 2020 Smart Swimmingpool
 /**
   Monitor to show temperature of smart-swimmingpool:
 
   ESP8266
-   - ESP8266 NodeMCU Controller
+   - ESP8266 NodeMCU Contoller
    - LiquidCrystal I2C 16*2 Display
 
   TTGO T5 E-Paper
-   - ESP32 Controller
+   - ESP32 Contoller
    - 2.13inch e-Paper
 */
 
@@ -33,20 +34,23 @@ const char*    DEVICE_NAME           = "pool-monitor";
 const int32_t  TIME_TO_SLEEP_SECONDS = 180;   // Time ESP32 will go to sleep (in seconds)
 const int32_t  NTP_SYNC_INTERVAL_SECONDS = 3600;  // Sync NTP time every hour (3600 seconds)
 
-//MQTT settings
+// MQTT settings
 String mqtt_server;
 u_int16_t mqtt_server_port;
 IPAddress  remote;     // IP Address of mqtt server
 
 #define uS_TO_S_FACTOR 1000000  // Conversion factor for micro seconds to seconds
+
+// Home Assistant MQTT state topics for pool-controller (fixed, no discovery needed)
+const char* HA_TOPIC_POOL_TEMP   = "homeassistant/sensor/pool-controller/pool-temp/state";
+const char* HA_TOPIC_SOLAR_TEMP  = "homeassistant/sensor/pool-controller/solar-temp/state";
+const char* HA_TOPIC_POOL_PUMP   = "homeassistant/switch/pool-controller/pool-pump/state";
+const char* HA_TOPIC_SOLAR_PUMP  = "homeassistant/switch/pool-controller/solar-pump/state";
+const char* HA_TOPIC_MODE        = "homeassistant/select/pool-controller/mode/state";
+
 // Buffer size for MQTT payload copy from callback.
 // 128 bytes cover expected short state payloads (temperature, ON/OFF, mode).
 const size_t MQTT_PAYLOAD_BUFFER_SIZE = 128;
-const char* HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC = "homeassistant/sensor/pool-controller/pool-temp/state";
-const char* HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC = "homeassistant/sensor/pool-controller/solar-temp/state";
-const char* HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC = "homeassistant/switch/pool-controller/pool-pump/state";
-const char* HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC = "homeassistant/switch/pool-controller/solar-pump/state";
-const char* HOME_ASSISTANT_MODE_STATE_TOPIC = "homeassistant/select/pool-controller/mode/state";
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -62,7 +66,7 @@ Preferences preferences;
 bool isNtpSyncNeeded() {
   unsigned long last_ntp_sync = preferences.getULong("last_ntp_sync", 0);
   unsigned long time_since_boot = preferences.getULong("total_uptime", 0);
-  
+
   // If never synced or more than NTP_SYNC_INTERVAL_SECONDS have passed
   if (last_ntp_sync == 0 || (time_since_boot - last_ntp_sync) >= NTP_SYNC_INTERVAL_SECONDS) {
     return true;
@@ -133,11 +137,11 @@ void updateDisplay() {
   display.drawCircle(display.width() - 35, 20, 4, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 20, 3, GxEPD_BLACK);
 
-  if(preferences.getBool("pump_pool", false)) {
+  if (preferences.getBool("pump_pool", false)) {
     u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
-    u8g2_for_adafruit_gfx.drawGlyph(95 , 48, 0x01ec); /* run circle */
+    u8g2_for_adafruit_gfx.drawGlyph(95, 48, 0x01ec); /* run circle */
   } else {
-    display.fillRect(95, 48 -5, 8, 8, GxEPD_WHITE);
+    display.fillRect(95, 48 - 5, 8, 8, GxEPD_WHITE);
   }
 
   display.setTextColor(GxEPD_BLACK);
@@ -149,28 +153,24 @@ void updateDisplay() {
   display.drawCircle(display.width() - 35, 64, 4, GxEPD_BLACK);
   display.drawCircle(display.width() - 35, 64, 3, GxEPD_BLACK);
 
-  if(preferences.getBool("pump_solar", false)) {
+  if (preferences.getBool("pump_solar", false)) {
     u8g2_for_adafruit_gfx.setFont(u8g2_font_streamline_all_t);
-    u8g2_for_adafruit_gfx.drawGlyph(95 , 94, 0x01ec); /* run circle */
+    u8g2_for_adafruit_gfx.drawGlyph(95, 94, 0x01ec); /* run circle */
   } else {
-    display.fillRect(95, 94 -5, 8, 8, GxEPD_WHITE);
+    display.fillRect(95, 94 - 5, 8, 8, GxEPD_WHITE);
   }
 
   display.updateWindow(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH - 1, UPDATE_AREA_HEIGHT - 1, true);
   // display.update();
   delay(5 * 1000);
-  //display.powerDown();
+  // display.powerDown();
 }
 
 
 /**
- *  @brief called on MQTT message
+ * Case-insensitive ASCII string comparison.
  */
-/**
- * Parse boolean MQTT state payloads used by Home Assistant topics.
- * Accepted truthy values: "true", "on", "1" (case-insensitive).
- */
-bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
+static bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
   if (lhs == nullptr || rhs == nullptr) {
     return false;
   }
@@ -184,7 +184,11 @@ bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
   return *lhs == *rhs;
 }
 
-bool parseHomeAssistantBoolState(const char* value) {
+/**
+ * Parse boolean MQTT state payloads used by Home Assistant topics.
+ * Accepted truthy values: "true", "on", "1" (case-insensitive).
+ */
+static bool parseHomeAssistantBoolState(const char* value) {
   if (value == nullptr) {
     return false;
   }
@@ -202,7 +206,11 @@ bool parseHomeAssistantBoolState(const char* value) {
   return false;
 }
 
+/**
+ *  @brief called on MQTT message
+ */
 void onMqttCallback(char* topic, byte* payload, unsigned int length) {
+  // Stack-allocated buffer instead of heap allocation (Deep-Sleep-sicher, kein Fragmentierungsrisiko)
   char payloadCopy[MQTT_PAYLOAD_BUFFER_SIZE];
   size_t payloadLength = length;
   if (payloadLength >= sizeof(payloadCopy)) {
@@ -212,39 +220,37 @@ void onMqttCallback(char* topic, byte* payload, unsigned int length) {
   }
   memcpy(payloadCopy, payload, payloadLength);
   payloadCopy[payloadLength] = '\0';
-  
-  String command = String(topic);
+
   String payloadString = String(payloadCopy);
 
-  if(command.endsWith("/pool-temp/state")) {
-
+  // Match Home Assistant state topics directly
+  if (strcmp(topic, HA_TOPIC_POOL_TEMP) == 0) {
     Serial.println("\tPool temperature: " + payloadString);
     preferences.putFloat("pool_temp", payloadString.toFloat());
 
-  } else if(command.endsWith("/solar-temp/state")) {
-
+  } else if (strcmp(topic, HA_TOPIC_SOLAR_TEMP) == 0) {
     Serial.println("\tSolar temperature: " + payloadString);
     preferences.putFloat("solar_temp", payloadString.toFloat());
 
-  } else if(command.endsWith("/pool-pump/state")) {
+  } else if (strcmp(topic, HA_TOPIC_POOL_PUMP) == 0) {
     Serial.println("\tPool pump: " + payloadString);
-    preferences.putBool("pump_pool", parseHomeAssistantBoolState(payloadString.c_str()));
+    preferences.putBool("pump_pool", parseHomeAssistantBoolState(payloadCopy));
 
-  } else if(command.endsWith("/solar-pump/state")) {
+  } else if (strcmp(topic, HA_TOPIC_SOLAR_PUMP) == 0) {
     Serial.println("\tSolar pump: " + payloadString);
-    preferences.putBool("pump_solar", parseHomeAssistantBoolState(payloadString.c_str()));
+    preferences.putBool("pump_solar", parseHomeAssistantBoolState(payloadCopy));
 
-  } else if(command.endsWith("/mode/state")) {
+  } else if (strcmp(topic, HA_TOPIC_MODE) == 0) {
     Serial.println("\tOperation Mode: " + payloadString);
     preferences.putString("pool_mode", payloadString);
   } else {
-    // Serial.println("Unmanaged mqtt message: " + command);
+    // Serial.println("Unmanaged mqtt message: " + String(topic));
   }
 }
 
 /**
-    Connect MQTT Server
-*/
+ * Connect MQTT Server
+ */
 void connectMQTT(IPAddress ip) {
   Serial.printf("Attempting MQTT connection to %s ...\n", mqtt_server.c_str());
   mqttClient.setServer(mqtt_server.c_str(), mqtt_server_port);
@@ -252,15 +258,17 @@ void connectMQTT(IPAddress ip) {
 
   // Attempt to connect
   if (mqttClient.connect(DEVICE_NAME)) {
-    Serial.println("🏊🏼\tConnected to MQTT server, subscribing to Home Assistant state topics");
+    Serial.println(F("MQTT connected."));
+
+    // Subscribe to Home Assistant state topics with per-subscription diagnostics
     bool subscriptionFailed = false;
     size_t successfulSubscriptions = 0;
     const char* subscriptions[] = {
-      HOME_ASSISTANT_POOL_TEMP_STATE_TOPIC,
-      HOME_ASSISTANT_SOLAR_TEMP_STATE_TOPIC,
-      HOME_ASSISTANT_POOL_PUMP_STATE_TOPIC,
-      HOME_ASSISTANT_SOLAR_PUMP_STATE_TOPIC,
-      HOME_ASSISTANT_MODE_STATE_TOPIC
+      HA_TOPIC_POOL_TEMP,
+      HA_TOPIC_SOLAR_TEMP,
+      HA_TOPIC_POOL_PUMP,
+      HA_TOPIC_SOLAR_PUMP,
+      HA_TOPIC_MODE
     };
     for (size_t i = 0; i < sizeof(subscriptions) / sizeof(subscriptions[0]); i++) {
       if (!mqttClient.subscribe(subscriptions[i])) {
@@ -276,7 +284,6 @@ void connectMQTT(IPAddress ip) {
     if (subscriptionFailed) {
       Serial.println("⚠️\tRunning in degraded mode due to missing MQTT subscriptions");
     }
-    Serial.println(F("MQTT connected."));
 
   } else {
     Serial.printf("failed, rc=%d\n", mqttClient.state());
@@ -311,7 +318,10 @@ void showSetupScreen() {
   displayText(DEVICE_NAME, 110, GxEPD_ALIGN_CENTER);
   display.update();
 
-  // Remove all preferences under the opened namespace
+  // Reset all preferences (clear keys, but keep namespace open).
+  // Do NOT call preferences.end() here — if the portal times out without saving,
+  // setup() continues with preferences.get*/put* calls and would hit defaults
+  // or fail silently with a closed namespace.
   preferences.clear();
 }
 
@@ -327,7 +337,7 @@ void showWiFiConnectionFailedScreen() {
 
   // Remove all preferences under the opened namespace
   preferences.clear();
-  
+
   // Close preferences before restart to prevent corruption
   preferences.end();
 
@@ -335,7 +345,6 @@ void showWiFiConnectionFailedScreen() {
 }
 
 void showWiFiConnectedScreen() {
-
   WiFi.waitForConnectResult();
 
   IPAddress wIP = WiFi.localIP();
@@ -359,13 +368,12 @@ void showWiFiConnectedScreen() {
 Method to print the reason by which ESP32
 has been awaken from sleep
 */
-void print_wakeup_reason(){
+void print_wakeup_reason() {
   esp_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_sleep_get_wakeup_cause();
 
-  switch(wakeup_reason)
-  {
+  switch (wakeup_reason) {
     case ESP_SLEEP_WAKEUP_EXT0:
       Serial.println("Wakeup caused by external signal using RTC_IO");
       break;
@@ -381,8 +389,8 @@ void print_wakeup_reason(){
     case ESP_SLEEP_WAKEUP_ULP:
       Serial.println("Wakeup caused by ULP program");
       break;
-    default :
-      Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason);
+    default:
+      Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason);
       initDisplay();
       break;
   }
@@ -414,13 +422,13 @@ void setup() {
     while (1) {
       delay(1000);
     }
-  };
+  }
   // Remove all preferences under the opened namespace
-  //preferences.clear();
+  // preferences.clear();
   Serial.printf("Number of free entries in prefs: %d\n", preferences.freeEntries());
 
   unsigned int boot_count = preferences.getUInt("boot_count", 0);
-  //Increment boot number and print it every reboot
+  // Increment boot number and print it every reboot
   Serial.printf("Current boot count: %u\n", ++boot_count);
   // Store the counter to the Preferences
   preferences.putUInt("boot_count", boot_count);
@@ -432,7 +440,7 @@ void setup() {
   preferences.putULong("total_uptime", total_uptime);
   Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
 
-  //Print the wakeup reason for ESP32
+  // Print the wakeup reason for ESP32
   print_wakeup_reason();
 
   SPIFFS.begin(true);  // Will format on the first run after failing to mount
@@ -441,10 +449,10 @@ void setup() {
   WiFiSettings.onPortal       = []() { showSetupScreen(); };
   WiFiSettings.onSuccess      = []() { showWiFiConnectedScreen(); };
   WiFiSettings.onFailure      = []() { showWiFiConnectionFailedScreen(); };
-  WiFiSettings.onConfigSaved  = []() { 
-    preferences.end(); // Close preferences before restart
-    ESP.restart();  
-  }; // Reboot as soon as config is saved
+  WiFiSettings.onConfigSaved  = []() {
+    preferences.end();  // Close preferences before restart
+    ESP.restart();
+  };  // Reboot as soon as config is saved
 
   // Define custom settings saved by WifiSettings
   // These will return the default if nothing was set before
@@ -457,12 +465,12 @@ void setup() {
 
   // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
   timeClient.begin();
-  
+
   if (isNtpSyncNeeded()) {
     Serial.println("⏰\tNTP sync needed - updating time from server");
     String currentTime = getCurrentTime();
     preferences.putString("last_update", currentTime);
-    
+
     // Update last sync timestamp
     preferences.putULong("last_ntp_sync", total_uptime);
 
@@ -470,7 +478,7 @@ void setup() {
     unsigned long synced_epoch = timeClient.getEpochTime();
     preferences.putULong("last_epoch", synced_epoch);
 
-    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n", 
+    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
                   currentTime.c_str(), NTP_SYNC_INTERVAL_SECONDS);
   } else {
     Serial.println("⏰\tNTP sync skipped - using cached time from stored epoch and uptime");
@@ -491,9 +499,10 @@ void setup() {
     preferences.putString("last_update", String(buf));
   }
 
-  for(int i=0;i<1000; i++) {
-    mqttClient.loop();  //Ensure we've sent & received everything
-    //Serial.print(i);
+  // Process MQTT messages with timeout (2 seconds max, 200 * 10ms)
+  // Retained messages arrive immediately after subscribe, so this is sufficient
+  for (int i = 0; i < 200; i++) {
+    mqttClient.loop();  // Ensure we've sent & received everything
     delay(10);
   }
 
@@ -505,13 +514,16 @@ void setup() {
   }
 
   WiFi.disconnect(true);  // Disconnect from the network
-  delay( 1 );
+  delay(1);
   WiFi.mode(WIFI_OFF);    // Switch WiFi off
-  delay( 1 );
+  delay(1);
 
   updateDisplay();
-  delay(3000); // Wait for the display to update
+  delay(3000);  // Wait for the display to update
   display.powerDown();
+
+  // Close SPIFFS to prevent flash handle leak over sleep cycles
+  SPIFFS.end();
 
   // Close the Preferences
   preferences.end();
