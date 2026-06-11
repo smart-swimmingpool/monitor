@@ -365,6 +365,13 @@ static void drawQrCode(const char* text, int16_t x, int16_t y, uint8_t scale) {
   }
 }
 
+// Flag to suppress preferences.clear() when the portal is entered from MQTT failure.
+// When the portal opens due to a WiFi failure, clearing preferences is appropriate
+// (no cached data yet). But when it opens due to an MQTT outage, we must preserve
+// cached pool data (pool_temp, solar_temp, last_epoch, etc.) so stale-data fallback
+// works if the device restarts after portal reconfiguration.
+static bool _portalIsForMqttConfig = false;
+
 void showSetupScreen() {
   Serial.println("⚙️\tConfiguration portal active");
 
@@ -401,11 +408,13 @@ void showSetupScreen() {
 
   display.update();
 
-  // Reset all preferences (clear keys, but keep namespace open).
-  // Do NOT call preferences.end() here — if the portal times out without saving,
-  // setup() continues with preferences.get*/put* calls and would hit defaults
-  // or fail silently with a closed namespace.
-  preferences.clear();
+  if (!_portalIsForMqttConfig) {
+    // Reset all preferences (clear keys, but keep namespace open).
+    // Do NOT call preferences.end() here — if the portal times out without saving,
+    // setup() continues with preferences.get*/put* calls and would hit defaults
+    // or fail silently with a closed namespace.
+    preferences.clear();
+  }
 }
 
 void showWiFiConnectionFailedScreen() {
@@ -576,6 +585,7 @@ void setup() {
     // Start the captive portal for reconfiguration.
     // This loops indefinitely until the user saves new settings,
     // which triggers the onConfigSaved callback → ESP.restart().
+    _portalIsForMqttConfig = true;
     WiFiSettings.portal();
     // Not reached (portal loops forever or restarts)
   }
