@@ -555,13 +555,48 @@ void setup() {
   // Launches the portal if the connection failed
   WiFiSettings.connect(true, 45);
 
-  // If MQTT is unreachable, use cached data and go to sleep.
-  // A temporary outage (broker restart, network glitch) recovers on the
-  // next wake cycle.  The portal is NOT started here — keeping the AP on
-  // indefinitely would drain the battery on a permanently wrong hostname,
-  // while sleeping+retrying costs ~180s per cycle with no extra power draw.
+  // If MQTT is unreachable, start the configuration portal with a 5-minute
+  // timeout so the user has time to fix settings (wrong hostname, port, etc.).
+  // If nobody interacts, the device goes to deep sleep to save battery and
+  // retries MQTT on the next wake cycle.  Saving the config triggers a restart
+  // (via onConfigSaved), which effectively restarts the 5-minute countdown
+  // on the next boot if MQTT is still unreachable.
   if (!mqttClient.connected()) {
-    Serial.println("⚠️\tMQTT server not reachable — using cached data, will retry on next wake");
+    Serial.println("🛑\tMQTT server not reachable - starting configuration portal (5 min timeout)");
+    Serial.println("📡\tConnect to the '" + String(DEVICE_NAME) + "' access point to configure MQTT settings");
+
+    // Show MQTT error briefly — showSetupScreen() (called by portal)
+    // will overwrite this with the full AP info + QR code.
+    display.fillScreen(GxEPD_WHITE);
+    display.setRotation(3);
+    display.setFont(&FreeSans9pt7b);
+    displayText("Pool Monitor", 14, GxEPD_ALIGN_LEFT, 3);
+    display.drawLine(3, 20, display.width() - 3, 20, GxEPD_BLACK);
+    displayText("*** MQTT Error ***", 55, GxEPD_ALIGN_CENTER);
+    displayText("Starting config...", 80, GxEPD_ALIGN_CENTER);
+    display.update();
+
+    // Portal timeout: 5 minutes of inactivity → deep sleep.
+    // This prevents indefinite battery drain while still giving the user
+    // a reasonable window to connect and save new settings.
+    WiFiSettings.onPortalWaitLoop = []() {
+      static unsigned long portalStart = millis();
+      if (millis() - portalStart > 300000) {  // 5 minutes
+        Serial.println("😴\tPortal timeout — going to deep sleep, will retry MQTT on next wake");
+        preferences.end();
+        SPIFFS.end();
+        display.powerDown();
+        esp_deep_sleep_start();  // never returns
+      }
+    };
+
+    // Start the captive portal for reconfiguration.
+    // This loops until one of:
+    //   - user saves → onConfigSaved callback → ESP.restart()
+    //   - 5 min timeout → esp_deep_sleep_start()
+    //   - user clicks restart → onRestart callback → ESP.restart()
+    WiFiSettings.portal();
+    // Not reached
   }
 
   // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
