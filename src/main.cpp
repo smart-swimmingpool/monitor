@@ -365,13 +365,6 @@ static void drawQrCode(const char* text, int16_t x, int16_t y, uint8_t scale) {
   }
 }
 
-// Flag to suppress preferences.clear() when the portal is entered from MQTT failure.
-// When the portal opens due to a WiFi failure, clearing preferences is appropriate
-// (no cached data yet). But when it opens due to an MQTT outage, we must preserve
-// cached pool data (pool_temp, solar_temp, last_epoch, etc.) so stale-data fallback
-// works if the device restarts after portal reconfiguration.
-static bool _portalIsForMqttConfig = false;
-
 void showSetupScreen() {
   Serial.println("⚙️\tConfiguration portal active");
 
@@ -408,13 +401,11 @@ void showSetupScreen() {
 
   display.update();
 
-  if (!_portalIsForMqttConfig) {
-    // Reset all preferences (clear keys, but keep namespace open).
-    // Do NOT call preferences.end() here — if the portal times out without saving,
-    // setup() continues with preferences.get*/put* calls and would hit defaults
-    // or fail silently with a closed namespace.
-    preferences.clear();
-  }
+  // Reset all preferences (clear keys, but keep namespace open).
+  // Do NOT call preferences.end() here — if the portal times out without saving,
+  // setup() continues with preferences.get*/put* calls and would hit defaults
+  // or fail silently with a closed namespace.
+  preferences.clear();
 }
 
 void showWiFiConnectionFailedScreen() {
@@ -564,30 +555,13 @@ void setup() {
   // Launches the portal if the connection failed
   WiFiSettings.connect(true, 45);
 
-  // If MQTT is not reachable, stay awake and open the configuration portal
-  // so the user can fix settings (MQTT hostname, port) instead of cycling
-  // through sleep/wake/fail loops.
+  // If MQTT is unreachable, use cached data and go to sleep.
+  // A temporary outage (broker restart, network glitch) recovers on the
+  // next wake cycle.  The portal is NOT started here — keeping the AP on
+  // indefinitely would drain the battery on a permanently wrong hostname,
+  // while sleeping+retrying costs ~180s per cycle with no extra power draw.
   if (!mqttClient.connected()) {
-    Serial.println("🛑\tMQTT server not reachable - starting configuration portal");
-    Serial.println("📡\tConnect to the '" + String(DEVICE_NAME) + "' access point to configure MQTT settings");
-
-    // Show MQTT error briefly — showSetupScreen() (called by portal)
-    // will overwrite this with the full AP info + QR code.
-    display.fillScreen(GxEPD_WHITE);
-    display.setRotation(3);
-    display.setFont(&FreeSans9pt7b);
-    displayText("Pool Monitor", 14, GxEPD_ALIGN_LEFT, 3);
-    display.drawLine(3, 20, display.width() - 3, 20, GxEPD_BLACK);
-    displayText("*** MQTT Error ***", 55, GxEPD_ALIGN_CENTER);
-    displayText("Starting config...", 80, GxEPD_ALIGN_CENTER);
-    display.update();
-
-    // Start the captive portal for reconfiguration.
-    // This loops indefinitely until the user saves new settings,
-    // which triggers the onConfigSaved callback → ESP.restart().
-    _portalIsForMqttConfig = true;
-    WiFiSettings.portal();
-    // Not reached (portal loops forever or restarts)
+    Serial.println("⚠️\tMQTT server not reachable — using cached data, will retry on next wake");
   }
 
   // Initialize NTP client and sync time only when needed (reduces network traffic and power consumption)
