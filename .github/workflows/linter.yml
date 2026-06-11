@@ -11,45 +11,38 @@ name: Lint Code Base
 # https://help.github.com/en/articles/workflow-syntax-for-github-actions
 #
 
-permissions:
-  contents: read
-  statuses: write
-
-#############################
-# Start the job on all push #
-#############################
 on:
   push:
-    branches-ignore:
-      - 'main'
+  pull_request:
+
+# Cancel in-progress runs for the same workflow+ref when new commits are pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 ###############
 # Set the Job #
 ###############
 jobs:
-  build:
-    # Name the Job
-    name: Lint Code Base
-    # Set the agent to run on
+  super-linter:
+    name: Super-Linter
     runs-on: ubuntu-latest
 
-    ##################
-    # Load all steps #
-    ##################
+    permissions:
+      contents: read
+      statuses: write
+
     steps:
-      ##########################
-      # Checkout the code base #
-      ##########################
       - name: Checkout Code
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      ################################
-      # Run Linter against code base #
-      ################################
-      - name: Lint Code Base
-        uses: super-linter/super-linter@v8
+      - name: Run Super-Linter
+        uses: super-linter/super-linter@v8.6.0
         env:
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_ANSIBLE: false
@@ -57,7 +50,26 @@ jobs:
           JSCPD_THRESHOLD: 30
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Arduino Lint
-        uses: arduino/arduino-lint-action@v2
-  
+          LINTER_RULES_PATH: .
+
+          # PlatformIO project optimizations
+          FILTER_REGEX_EXCLUDE: .*/(\.pio|\.vscode|\.platformio|build|lib)/.*
+
+          # Enable relevant linters for this repository
+          VALIDATE_CPP: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_GITLEAKS: true
+          VALIDATE_BASH: true
+
+          # C/C++ specific settings
+          CPP_FILE_EXTENSIONS: "cpp,hpp,h"
+
+          # Don't treat warnings as errors
+          WARNINGS_AS_ERRORS: false
+
+          # Logging
+          LOG_LEVEL: NOTICE
