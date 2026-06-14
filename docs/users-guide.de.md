@@ -15,22 +15,22 @@ menu:
     weight: 40
 ---
 
-## Setup
+## Einrichtung
 
-Connecting the device to power it createsinitial a hotspot called "pool-monitor".
-Please connect this hotsppot by smartphone. Thenthe device will show captivate website to add
-WiFi credentials and connection parameters of MQTT broker.
+Wenn das Gerät mit Strom verbunden wird, erstellt es initial einen Hotspot namens "pool-monitor".
+Bitte verbinde dich per Smartphone mit diesem Hotspot. Das Gerät zeigt dann eine Captive-Website an, um
+WLAN-Zugangsdaten und Verbindungsparameter des MQTT-Brokers einzugeben.
 
-Following data is required to connect the device:
+Folgende Daten werden für die Verbindung benötigt:
 
-* SSID of the WiFi network
-* Password of WiFi network
-* MQTT broker hostname or IP address
-* MQTT broker port number (default: 1883)
+* SSID des WLAN-Netzwerks
+* Passwort des WLAN-Netzwerks
+* MQTT-Broker-Hostname oder IP-Adresse
+* MQTT-Broker-Portnummer (Standard: 1883)
 
-After pressing "Save" the device will reboot automatically and tries to connect to the MQTT broker.
+Nach dem Klick auf "Save" startet das Gerät automatisch neu und versucht, sich mit dem MQTT-Broker zu verbinden.
 
-After some seconds the device will show data if connection was successful.
+Nach einigen Sekunden zeigt das Gerät die Daten an, wenn die Verbindung erfolgreich war.
 
 ## Netzwerkkonfiguration (mDNS)
 
