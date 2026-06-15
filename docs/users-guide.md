@@ -17,8 +17,8 @@ menu:
 
 ## Setup
 
-Connecting the device to power it createsinitial a hotspot called "pool-monitor".
-Please connect this hotsppot by smartphone. Thenthe device will show captivate website to add
+Connecting the device to power creates initial a hotspot called "pool-monitor".
+Please connect this hotspot by smartphone. Then the device will show captive website to add
 WiFi credentials and connection parameters of MQTT broker.
 
 Following data is required to connect the device:

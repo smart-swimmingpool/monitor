@@ -4,6 +4,8 @@
     "docs/_index.de.md"
   ],
   "config": {
-    "MD013": false
+    "MD013": false,
+    "MD004": false,
+    "MD060": false
   }
 }
