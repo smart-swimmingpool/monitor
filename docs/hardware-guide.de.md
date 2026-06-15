@@ -203,7 +203,7 @@ kleinen Solarzelle an den meisten Standorten deckbar.
 | # | Komponente | Menge | ca. Preis | Hinweise |
 | --- | --- | --- | --- | --- |
 | 1 | Solarpanel, 5 V / 1–2 W | 1 | 10–25 € | Monokristallin, offene Klemmenspannung 5,5–6 V |
-| 2 | Li‑Po‑Akku, 3,7 V, 1000–2000 mAh | 1 | 8–15 € | Mit JST‑1,25‑mm‑Stecker (PHR‑2, 2‑polig) |
+| 2 | Li‑Po‑Akku, 3,7 V, 1000–2000 mAh | 1 | 8–15 € | Mit JST‑1,25‑mm‑Stecker (2‑polig, roter Draht = Plus) |
 | 3 | USB‑C Breakout‑Board oder **XC6206‑5.0V** Reglermodul | 1 | 2–5 € | Zur stabilen 5 V‑Versorgung aus dem Solarpanel |
 | 4 | Optional: Schottky‑Diode (1N5819) | 1 | 1 € | Rückflussschutz vom Board zum Panel bei Dunkelheit |
 | 5 | Optional: Gehäuse (IP65+, transparente Abdeckung) | 1 | 10–20 € | Solarpanel kann Deckel ersetzen oder integriert werden |
@@ -215,7 +215,7 @@ kleinen Solarzelle an den meisten Standorten deckbar.
   z. B. bei Reichelt, Pollin, Amazon oder AliExpress. Ideal sind monokristalline
   Panels mit ETFE-Beschichtung für Außeneinsatz.
 - **Li‑Po‑Akku**: Suche nach *„3.7V 1000mAh Li‑Po JST 1.25“* oder
-  *„LP401230 1000mAh“*. Achte auf den **JST‑PHR‑2‑Stecker (1,25 mm Raster)**.
+  *„LP401230 1000mAh“*. Achte auf den **1,25‑mm‑JST‑Stecker (2‑polig)**.
   Gängige Formate: 401230 (1000 mAh, ca. 30×12×4 mm) oder 503048 (1500 mAh).
 - **USB‑C Breakout**: Für direkte 5 V‑Einspeisung über den USB‑C‑Port.
 

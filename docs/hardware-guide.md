@@ -205,7 +205,7 @@ small solar panel at most locations.
 | # | Component | Qty | Approx. Cost | Notes |
 | --- | --- | --- | --- | --- |
 | 1 | Solar panel, 5 V / 1–2 W | 1 | 10–25 € | Monocrystalline, open-circuit voltage 5.5–6 V |
-| 2 | Li‑Po battery, 3.7 V, 1000–2000 mAh | 1 | 8–15 € | With JST 1.25 mm connector (PHR‑2, 2‑pin) |
+| 2 | Li‑Po battery, 3.7 V, 1000–2000 mAh | 1 | 8–15 € | With JST 1.25 mm connector (2‑pin, red wire = positive) |
 | 3 | USB‑C breakout board or **XC6206‑5.0V** regulator module | 1 | 2–5 € | For stable 5 V feed from solar panel |
 | 4 | Optional: Schottky diode (1N5819) | 1 | 1 € | Reverse current protection when panel is dark |
 | 5 | Optional: Enclosure (IP65+, transparent cover) | 1 | 10–20 € | Solar panel can replace lid or be integrated |
@@ -217,8 +217,8 @@ small solar panel at most locations.
   module"*, e.g. on Amazon, AliExpress. Monocrystalline panels with ETFE
   coating are ideal for outdoor use.
 - **Li‑Po battery**: Search for *"3.7V 1000mAh Li‑Po JST 1.25"* or
-  *"LP401230 1000mAh"*. Make sure it has a **JST PHR‑2 connector
-  (1.25 mm pitch)**. Common form factors: 401230 (1000 mAh, ~30×12×4 mm) or
+  *"LP401230 1000mAh"*. Make sure it has a **1.25 mm JST connector
+  (2‑pin)**. Common form factors: 401230 (1000 mAh, ~30×12×4 mm) or
   503048 (1500 mAh).
 - **USB‑C breakout**: For direct 5 V injection via the USB‑C port.
 
