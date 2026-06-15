@@ -171,6 +171,237 @@ hat einen eingebauten Akku-Anschluss und Ladeschaltung).
 
 ---
 
+## Solarbetrieb ☀️
+
+Der Pool Monitor eignet sich aufgrund seines extrem niedrigen Energieverbrauchs
+(Durchschnitt ~5,5 mA bei 5 V) hervorragend für den autonomen Solarbetrieb.
+Mit einer kleinen Solarzelle und einem Li‑Po‑Akku kann das Gerät dauerhaft
+ohne USB‑Netzteil betrieben werden.
+
+> **Voraussetzung**: Das TTGO T5 Board hat einen **eingebauten Li‑Po‑Lader
+> (TP4056)** und einen **JST‑1,25‑mm‑Batteriestecker**. Für den Solarbetrieb wird
+> nur ein Solarpanel und ein Akku benötigt – das Board übernimmt die Ladeelektronik.
+
+---
+
+### Leistungsbudget
+
+| Zustand | Strom | Dauer pro Zyklus |
+| --- | --- | --- |
+| Aktiv (WiFi + MQTT + Display‑Update) | ~80 mA | ~10–15 Sekunden |
+| Deep Sleep | ~10 µA | ~165–170 Sekunden |
+| **Durchschnitt** | **~5,5 mA** | über 180‑s‑Zyklus |
+| **Täglicher Energiebedarf** | **~132 mAh** | bei 5 V (≙ 660 mWh) |
+
+Der tägliche Energiebedarf von **~130 mAh** (bei 5 V) ist selbst mit einer
+kleinen Solarzelle an den meisten Standorten deckbar.
+
+---
+
+### Benötigte Teile (zusätzlich)
+
+| # | Komponente | Menge | ca. Preis | Hinweise |
+| --- | --- | --- | --- | --- |
+| 1 | Solarpanel, 5 V / 1–2 W | 1 | 10–25 € | Monokristallin, offene Klemmenspannung 5,5–6 V |
+| 2 | Li‑Po‑Akku, 3,7 V, 1000–2000 mAh | 1 | 8–15 € | Mit JST‑1,25‑mm‑Stecker (PHR‑2, 2‑polig) |
+| 3 | USB‑C Breakout‑Board oder **XC6206‑5.0V** Reglermodul | 1 | 2–5 € | Zur stabilen 5 V‑Versorgung aus dem Solarpanel |
+| 4 | Optional: Schottky‑Diode (1N5819) | 1 | 1 € | Rückflussschutz vom Board zum Panel bei Dunkelheit |
+| 5 | Optional: Gehäuse (IP65+, transparente Abdeckung) | 1 | 10–20 € | Solarpanel kann Deckel ersetzen oder integriert werden |
+| **Gesamt** | — | — | **~30–65 €** | Zusätzlich zum Basis‑BOM |
+
+#### Bezugsquellen für Solarkomponenten
+
+- **Solarpanel**: Suche nach *„5V 2W Solarpanel“* oder *„6V 200mA Solarmodul“*,
+  z. B. bei Reichelt, Pollin, Amazon oder AliExpress. Ideal sind monokristalline
+  Panels mit ETFE-Beschichtung für Außeneinsatz.
+- **Li‑Po‑Akku**: Suche nach *„3.7V 1000mAh Li‑Po JST 1.25“* oder
+  *„LP401230 1000mAh“*. Achte auf den **JST‑PHR‑2‑Stecker (1,25 mm Raster)**.
+  Gängige Formate: 401230 (1000 mAh, ca. 30×12×4 mm) oder 503048 (1500 mAh).
+- **USB‑C Breakout**: Für direkte 5 V‑Einspeisung über den USB‑C‑Port.
+
+---
+
+### Schaltungsvarianten
+
+#### Variante A: Solarpanel → USB‑C (empfohlen, einfach)
+
+Die einfachste und sicherste Methode – nutzt den **eingebauten TP4056 Lader**
+des TTGO T5.
+
+```text
+  Solarpanel          TTGO T5 V231
+  (5-6V)                  ┌────────┐
+     │                    │ USB-C  │
+     ├─[USB-C Breakout]───┤  Port  │
+     │                    │        │
+  Li‑Po Akku              │  JST   │
+  (3.7V, 1000mAh) ────────┤  BAT   │
+                           └────────┘
+```
+
+1. **Solarpanel** (5–6 V) an ein USB‑C Breakout‑Board oder direkt an einen
+   USB‑C Stecker löten (VBUS auf Pin A4/A9/B4/B9, GND auf A1/B1).
+2. USB‑C Breakout in den USB‑C Port des TTGO T5 stecken.
+3. **Li‑Po‑Akku** an den JST‑1,25‑mm‑Stecker (BAT) des TTGO T5 anschließen.
+
+*Hinweis*: Das Panel muss **5 V (nominal) bis max. 6 V** liefern. Der TP4056
+benötigt mindestens ~4,5 V zum Starten des Ladevorgangs.
+
+#### Variante B: Externer Solarlader (flexibler)
+
+Verwendet ein separates Solarlader-Modul (z. B. **CN3065** oder **TP4056 mit
+Solar-Eingang**) für bessere Energieausbeute bei schwachem Licht.
+
+```text
+  Solarpanel          Solarlader           TTGO T5 V231
+  (5-6V)              Modul                ┌────────┐
+     │                  │                  │ USB-C  │
+     ├──────────────────┤ IN+         OUT+─┤  Port  │
+     │                  │                  │        │
+                         │ BAT+  ────────   │  JST   │
+  Li‑Po Akku ───────────┤ BAT-      ──────┤  BAT   │
+                         │                  └────────┘
+```
+
+1. Solarpanel an den **IN+ / IN−** Anschluss des Ladereglers.
+2. Li‑Po‑Akku an **BAT+ / BAT−** des Ladereglers.
+3. Lader‑Ausgang an den JST‑BAT‑Stecker des TTGO T5 **oder** über einen
+   5 V‑Step‑Up‑Wandler an den USB‑C Port.
+
+> **Vorteil**: Module wie der CN3065 haben einen **MPPT‑ähnlichen
+> Eingangsregler**, der auch bei Bewölkung noch Energie liefert.
+
+---
+
+### Minimalkonfiguration (Sommerbetrieb) ☀️
+
+Wenn der Monitor **nur in der warmen Jahreszeit** (Mai–September) und bei
+**überwiegend gutem Wetter** laufen soll, reichen minimale Komponenten:
+
+| Komponente | Minimal | Begründung |
+| --- | --- | --- |
+| **Solarpanel** | **0,3–0,5 W** (5 V, ~60–100 mA) | Im Sommer ~250 mAh/Tag Ertrag – das Doppelte des Bedarfs |
+| **Akku** | **500 mAh** (z. B. LP401015) | Überbrückt die Nacht (~66 mAh) + 2 bewölkte Tage |
+| **Schottky-Diode** | Optional, aber empfohlen | Verhindert nächtlichen Rückstrom bei kleinem Panel |
+
+Der **tägliche Bedarf von ~130 mAh** wird im Sommer bereits von einem
+**0,3‑W‑Panel** (60 mA × 6 h × 0,7 Wirkungsgrad ≈ 250 mAh/Tag) übertroffen.
+Die Nacht überbrückt der Akku – selbst nach einem bewölkten Tag ist noch
+genug Reserve für den Folgetag.
+
+> **Praxis-Tipp**: Ein Panel unter 0,5 W ist oft kaum günstiger als ein
+> 0,5‑W‑Panel. Empfehlung daher: **0,5 W + 500‑mAh‑Akku** als günstigste
+> Kombination (Kosten ~15–25 € zusätzlich zum Board).
+
+### Dimensionierung
+
+#### Akku-Größe
+
+| Autonomie | Empfohlene Kapazität | Beispiel |
+| --- | --- | --- |
+| Nacht + 1 Regentag (Sommer-Minimum) | 500 mAh | LP401015 / 501215 (~15×12×4 mm) |
+| 2–3 Tage (Sicherheit) | 1000 mAh | LP401230 (30×12×4 mm) |
+| 5–7 Tage (Winter/trüb) | 2000 mAh | LP503048 (50×30×5 mm) |
+| 10+ Tage (Notversorgung) | 3000 mAh | LP604560 (60×45×6 mm) |
+
+**Faustregel**: In Deutschland sind im Winter durchschnittlich **2–3 Sonnenstunden
+pro Tag** üblich (Nov–Feb). Ein 1000‑mAh‑Akku überbrückt 5–7 Tage ohne Sonne.
+Ein 2000‑mAh‑Akku reicht für 10–14 Tage.
+
+#### Solarpanel-Größe
+
+| Panel | Spannung | Strom (max) | Tagesertrag (Winter) | Tagesertrag (Sommer) |
+| --- | --- | --- | --- | --- |
+| 0,3 W | 5 V | ~60 mA | ~30 mAh | ~150 mAh |
+| **0,5 W** | **5 V** | **~100 mA** | **~50 mAh** | **~250 mAh** |
+| 1 W | 5 V | ~200 mA | ~100 mAh | ~500 mAh |
+| 2 W | 5 V | ~400 mA | ~200 mAh | ~1000 mAh |
+
+**Empfehlung**:
+
+- **Nur Sommer**: **0,5 W + 500‑mAh‑Akku** – klein, leicht, günstig
+- **Ganzjahresbetrieb (DE/AT/CH)**: **1–2 W + 1000–2000‑mAh‑Akku**
+
+#### Panel‑Abmessungen (Richtwerte)
+
+| Leistung | Typische Maße (Breite × Höhe) | Dicke |
+| --- | --- | --- |
+| 0,5 W | 90 × 60 mm | 2–3 mm |
+| 1 W | 110 × 70 mm | 2–3 mm |
+| 2 W | 155 × 85 mm | 2–3 mm |
+| 3 W | 185 × 95 mm | 2–3 mm |
+
+---
+
+### Verdrahtung – Schritt für Schritt
+
+#### Vorbereitung
+
+1. **TTGO T5 vom Strom trennen** (USB‑C und Akku entfernen).
+2. Alle Komponenten auf einer nicht-leitenden Unterlage auslegen.
+3. Bei Verwendung von Litzen: Adern verzinnen, Schrumpfschlauch vorbereiten.
+
+#### Variante A (empfohlen) – Schritt-für-Schritt
+
+1. **USB‑C Breakout vorbereiten**: Die Pads VBUS und GND mit einem
+   feinen Lötkolben verzinnen.
+2. **Solarpanel vorbereiten**: Die Litzen des Panels mit Schrumpfschlauch
+   isolieren; Plus (rot) an VBUS, Minus (schwarz) an GND des Breakouts.
+3. **Optional: Schottky‑Diode 1N5819** in Reihe zur Plus‑Leitung setzen
+   (Kathode zum Breakout, Anode zum Panel), um Rückstrom bei Dunkelheit
+   zu verhindern.
+4. **Breakout einstecken**: USB‑C Breakout vorsichtig in den USB‑C Port
+   des TTGO T5 stecken.
+5. **Li‑Po‑Akku anschließen**: Den Akku‑Stecker in die **JST‑1,25‑mm‑Buchse
+   (BAT)** auf dem TTGO T5 stecken. Achtung: Verpolung – roter Draht = Plus.
+6. **Sichtprüfung**: Keine losen Drähte, keine Kurzschlüsse.
+
+#### Test
+
+1. Nur **Solarpanel** anschließen (ohne Akku) – die rote LED auf dem TTGO T5
+   sollte leuchten, wenn das Panel ausreichend Licht bekommt. Das Board sollte
+   booten.
+2. Panel abstecken, **Akku allein** anschließen – das Board sollte aus dem Akku
+   booten.
+3. **Beide anschließen** – Normalbetrieb. Der TP4056 lädt den Akku bei
+   Lichteinfall und schaltet bei Dunkelheit automatisch auf Akku um.
+4. Firmware testen: WiFi‑Verbindung, MQTT, Display‑Update.
+
+---
+
+### Gehäuse und Aufstellung
+
+- **Wetterfestes Gehäuse (IP65+)** verwenden, z. B. ABS‑Kunststoffgehäuse von
+  Bopla, Spelsberg oder Hammond.
+- Das **Solarpanel** kann entweder:
+  - **außen auf dem Gehäuse** montiert werden (Kabel durch Dichteinführung),
+  - oder bei transparentem Deckel **innen hinter einer klaren Scheibe** liegen
+    (Ertrag dann ca. 10–20 % geringer).
+- **Aufstellort**: Südausrichtung, Neigung 30–45°, kein Schattenwurf
+  (Bäume/Gebäude). In DE/AT/CH reicht bereits eine **Mittagssonne von 2–3 h**
+  für den Minimalbetrieb.
+- **Lüftungsschlitze** sind wegen der geringen Verlustleistung nicht nötig.
+- **Temperaturen**: Der Li‑Po‑Akku sollte nicht über 60 °C erwärmt werden.
+  Bei direkter Sonneneinstrahlung auf das schwarze Gehäuse Hitzestau vermeiden
+  (ggf. helles Gehäuse oder Schattenplatz).
+
+---
+
+### Hinweise und Sicherheit ⚠️
+
+- **Li‑Po‑Sicherheit**: Nur Akkus mit **Überlade‑/Tiefentladeschutz (PCB)**
+  verwenden. Bei Beschädigung (Beule, Aufblähung) sofort austauschen.
+- **Niemals** das Solarpanel an die **JST‑BAT‑Buchse** anschließen – dort gehört
+  nur ein **Akku** hin. Die Eingangsspannung des TP4056 ist auf max. 6 V
+  begrenzt; höhere Spannung zerstört den Charger.
+- **USB‑C Datenleitung**: Bei Variante A wird der USB‑C Port belegt.
+  Zum Flashen der Firmware muss das Breakout abgezogen werden – es sei denn,
+  man nutzt **UART über die Stiftleisten** (RX/TX) am Board.
+- **Kabelzugentlastung**: Im Gehäuse Kabelbinder oder Kleberpunkte gegen
+  Zugbelastung auf den Steckern vorsehen.
+
+---
+
 ## Erste Inbetriebnahme
 
 ### 1. Sichtprüfung

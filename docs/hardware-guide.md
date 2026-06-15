@@ -172,6 +172,240 @@ Li-Po cell (the TTGO T5 has a built-in battery connector and charger).
 
 ---
 
+## Solar Power Operation ☀️
+
+The Pool Monitor's extremely low power consumption (average ~5.5 mA at 5 V)
+makes it an excellent candidate for autonomous solar operation. With a small
+solar panel and a Li‑Po battery, the device can run indefinitely without a
+USB power supply.
+
+> **Prerequisite**: The TTGO T5 board includes a **built-in Li‑Po charger
+> (TP4056)** and a **JST 1.25 mm battery connector**. For solar operation you
+> only need a solar panel and a battery — the board handles charging electronics
+> itself.
+
+---
+
+### Power Budget
+
+| State | Current | Duration per cycle |
+| --- | --- | --- |
+| Active (WiFi + MQTT + display update) | ~80 mA | ~10–15 seconds |
+| Deep sleep | ~10 µA | ~165–170 seconds |
+| **Average** | **~5.5 mA** | over 180 s cycle |
+| **Daily energy requirement** | **~132 mAh** | at 5 V (≙ 660 mWh) |
+
+The daily energy requirement of **~130 mAh** (at 5 V) can be met by even a
+small solar panel at most locations.
+
+---
+
+### Additional Parts Required
+
+| # | Component | Qty | Approx. Cost | Notes |
+| --- | --- | --- | --- | --- |
+| 1 | Solar panel, 5 V / 1–2 W | 1 | 10–25 € | Monocrystalline, open-circuit voltage 5.5–6 V |
+| 2 | Li‑Po battery, 3.7 V, 1000–2000 mAh | 1 | 8–15 € | With JST 1.25 mm connector (PHR‑2, 2‑pin) |
+| 3 | USB‑C breakout board or **XC6206‑5.0V** regulator module | 1 | 2–5 € | For stable 5 V feed from solar panel |
+| 4 | Optional: Schottky diode (1N5819) | 1 | 1 € | Reverse current protection when panel is dark |
+| 5 | Optional: Enclosure (IP65+, transparent cover) | 1 | 10–20 € | Solar panel can replace lid or be integrated |
+| **Total** | — | — | **~30–65 €** | Additional to the base BOM |
+
+#### Where to Buy Solar Components
+
+- **Solar panel**: Search for *"5V 2W solar panel"* or *"6V 200mA solar
+  module"*, e.g. on Amazon, AliExpress. Monocrystalline panels with ETFE
+  coating are ideal for outdoor use.
+- **Li‑Po battery**: Search for *"3.7V 1000mAh Li‑Po JST 1.25"* or
+  *"LP401230 1000mAh"*. Make sure it has a **JST PHR‑2 connector
+  (1.25 mm pitch)**. Common form factors: 401230 (1000 mAh, ~30×12×4 mm) or
+  503048 (1500 mAh).
+- **USB‑C breakout**: For direct 5 V injection via the USB‑C port.
+
+---
+
+### Circuit Variants
+
+#### Variant A: Solar Panel → USB‑C (recommended, simple)
+
+The simplest and safest method — uses the **built-in TP4056 charger** of the
+TTGO T5.
+
+```text
+  Solar Panel          TTGO T5 V231
+  (5-6V)                  ┌────────┐
+     │                    │ USB-C  │
+     ├─[USB-C Breakout]───┤  Port  │
+     │                    │        │
+  Li‑Po Battery           │  JST   │
+  (3.7V, 1000mAh) ────────┤  BAT   │
+                           └────────┘
+```
+
+1. **Solar panel** (5–6 V) — solder to a USB‑C breakout board or directly to
+   a USB‑C plug (VBUS to pins A4/A9/B4/B9, GND to A1/B1).
+2. Plug the USB‑C breakout into the TTGO T5's USB‑C port.
+3. **Li‑Po battery** — connect to the JST 1.25 mm (BAT) connector on the
+   TTGO T5.
+
+*Note*: The panel must deliver **5 V (nominal) up to 6 V max**. The TP4056
+requires at least ~4.5 V to start charging.
+
+#### Variant B: External Solar Charger (more flexible)
+
+Uses a dedicated solar charger module (e.g. **CN3065** or **TP4056 with solar
+input**) for better energy harvesting in low light.
+
+```text
+  Solar Panel        Solar Charger        TTGO T5 V231
+  (5-6V)             Module               ┌────────┐
+     │                  │                  │ USB-C  │
+     ├──────────────────┤ IN+         OUT+─┤  Port  │
+     │                  │                  │        │
+                         │ BAT+  ────────   │  JST   │
+  Li‑Po Battery ────────┤ BAT-      ──────┤  BAT   │
+                         │                  └────────┘
+```
+
+1. Connect solar panel to the **IN+ / IN−** terminals of the charger module.
+2. Connect Li‑Po battery to **BAT+ / BAT−** of the charger.
+3. Connect charger output to the TTGO T5's JST BAT connector **or** via a
+   5 V step-up converter to the USB‑C port.
+
+> **Advantage**: Modules like the CN3065 feature an **MPPT‑like input
+> regulator** that still harvests power in cloudy conditions.
+
+---
+
+### Minimum Configuration (Summer Only) ☀️
+
+If the monitor only needs to run **during the warm season** (May–September)
+in **mostly good weather**, minimal components are sufficient:
+
+| Component | Minimum | Rationale |
+| --- | --- | --- |
+| **Solar panel** | **0.3–0.5 W** (5 V, ~60–100 mA) | Summer yield ~250 mAh/day – twice the daily need |
+| **Battery** | **500 mAh** (e.g. LP401015) | Bridges the night (~66 mAh) + 2 cloudy days |
+| **Schottky diode** | Optional but recommended | Prevents reverse current at night with small panels |
+
+The **daily requirement of ~130 mAh** is already exceeded by a **0.3 W panel**
+(60 mA × 6 h × 0.7 efficiency ≈ 250 mAh/day) in summer. The battery handles
+the night – even after a cloudy day there's enough reserve for the next day.
+
+> **Practical tip**: A panel below 0.5 W is often barely cheaper than a
+> 0.5 W panel. Recommendation: **0.5 W + 500 mAh battery** as the cheapest
+> combination (~15–25 € additional to the board).
+
+### Sizing
+
+#### Battery Capacity
+
+| Autonomy | Recommended Capacity | Example |
+| --- | --- | --- |
+| Night + 1 rainy day (summer minimum) | 500 mAh | LP401015 / 501215 (~15×12×4 mm) |
+| 2–3 days (safety margin) | 1000 mAh | LP401230 (30×12×4 mm) |
+| 5–7 days (winter/overcast) | 2000 mAh | LP503048 (50×30×5 mm) |
+| 10+ days (emergency reserve) | 3000 mAh | LP604560 (60×45×6 mm) |
+
+**Rule of thumb**: In central Europe (DE/AT/CH) winter months typically see
+**2–3 effective sun hours per day** (Nov–Feb). A 1000 mAh battery bridges
+5–7 days without sun. A 2000 mAh battery lasts 10–14 days.
+
+#### Solar Panel Size
+
+| Panel | Voltage | Current (max) | Daily yield (winter) | Daily yield (summer) |
+| --- | --- | --- | --- | --- |
+| 0.3 W | 5 V | ~60 mA | ~30 mAh | ~150 mAh |
+| **0.5 W** | **5 V** | **~100 mA** | **~50 mAh** | **~250 mAh** |
+| 1 W | 5 V | ~200 mA | ~100 mAh | ~500 mAh |
+| 2 W | 5 V | ~400 mA | ~200 mAh | ~1000 mAh |
+
+**Recommendation**:
+
+- **Summer only**: **0.5 W + 500 mAh battery** – small, light, cheap
+- **Year-round (DE/AT/CH)**: **1–2 W + 1000–2000 mAh battery**
+
+#### Panel Dimensions (approximate)
+
+| Power | Typical size (W × H) | Thickness |
+| --- | --- | --- |
+| 0.5 W | 90 × 60 mm | 2–3 mm |
+| 1 W | 110 × 70 mm | 2–3 mm |
+| 2 W | 155 × 85 mm | 2–3 mm |
+| 3 W | 185 × 95 mm | 2–3 mm |
+
+---
+
+### Wiring – Step by Step
+
+#### Preparation
+
+1. **Disconnect TTGO T5 from any power source** (USB‑C and battery).
+2. Lay out all components on a non-conductive surface.
+3. If using stranded wire: tin the ends, prepare heatshrink tubing.
+
+#### Variant A (recommended) – Step by Step
+
+1. **Prepare the USB‑C breakout**: Tin the VBUS and GND pads with a fine
+   soldering iron.
+2. **Prepare the solar panel**: Insulate the panel leads with heatshrink;
+   positive (red) to VBUS, negative (black) to GND on the breakout.
+3. **Optional: Schottky diode 1N5819** — place in series with the positive
+   lead (cathode toward breakout, anode toward panel) to prevent reverse
+   current at night.
+4. **Insert the breakout**: Gently plug the USB‑C breakout into the TTGO T5's
+   USB‑C port.
+5. **Connect the Li‑Po battery**: Plug the battery connector into the
+   **JST 1.25 mm (BAT)** socket on the TTGO T5. Watch polarity — red wire =
+   positive.
+6. **Visual inspection**: No loose wires, no short circuits.
+
+#### Test
+
+1. Connect **solar panel only** (no battery) — the red LED on the TTGO T5
+   should light if the panel receives sufficient light. The board should boot.
+2. Disconnect panel, connect **battery only** — the board should boot from
+   battery.
+3. **Connect both** — normal operation. The TP4056 charges the battery in
+   sunlight and automatically switches to battery when dark.
+4. Test the firmware: WiFi connection, MQTT, display update.
+
+---
+
+### Enclosure and Placement
+
+- Use a **weatherproof enclosure (IP65+)**, e.g. ABS plastic enclosures from
+  Bopla, Spelsberg, or Hammond.
+- The **solar panel** can either:
+  - be **mounted on the outside** of the enclosure (cable routed through a
+    cable gland),
+  - or be placed **inside behind a clear window** if the lid is transparent
+    (yield reduction ~10–20 %).
+- **Placement**: South-facing, tilt 30–45°, no shading (trees/buildings). In
+  DE/AT/CH, as little as **2–3 h of midday sun** is enough for minimum
+  operation.
+- **Ventilation slots** are not required due to the low heat dissipation.
+- **Temperatures**: The Li‑Po battery should not exceed 60 °C. In direct
+  sunlight on a dark enclosure, avoid heat buildup (use a light-colored
+  enclosure or place in partial shade).
+
+---
+
+### Notes and Safety ⚠️
+
+- **Li‑Po safety**: Only use batteries with **built-in overcharge/overdischarge
+  protection (PCB)**. Replace immediately if damaged (swelling, bulging).
+- **Never** connect the solar panel to the **JST BAT socket** — that connector
+  is for the **battery only**. The TP4056 input is limited to 6 V max; higher
+  voltage will destroy the charger.
+- **USB‑C data path**: Variant A occupies the USB‑C port. To flash new
+  firmware, unplug the breakout — unless you use **UART via the pin headers**
+  (RX/TX) on the board.
+- **Strain relief**: Use cable ties or glue dots inside the enclosure to
+  prevent force on the connectors.
+
+---
+
 ## First Power-On and Testing
 
 ### 1. Visual Inspection
