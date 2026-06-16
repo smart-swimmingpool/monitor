@@ -28,6 +28,8 @@
 #include "board_def.h"
 #include "ntp_localtime.h"
 #include "u8g2_display.h"
+#include "OtaUpdater.hpp"
+#include "Version.h"
 
 #define MODEM_POWER_ON 23
 #define LED_BUILTIN 2  // built-in LED on TTGO-T5
@@ -106,6 +108,12 @@ void initDisplay() {
   display.drawLine(0, 103, display.width(), 103, GxEPD_BLACK);
   display.setFont(&FreeSans9pt7b);
   displayText("www.smart-swimmingpool.com", 117, GxEPD_ALIGN_LEFT);
+
+  // Firmware version in bottom-right corner
+  display.setFont(&FreeMono9pt7b);
+  char versionBuf[16];
+  snprintf(versionBuf, sizeof(versionBuf), "v%s", FW_VERSION);
+  displayText(versionBuf, 117, GxEPD_ALIGN_RIGHT, 2);
 
   display.update();
 }
@@ -498,6 +506,8 @@ void setup() {
   Serial.println(F("| Pool Monitor                        |"));
   Serial.println(F("| www.smart-swimmingpool.com          |"));
   Serial.println(F(" ------------------------------------- "));
+  Serial.printf("📦\tFW Version: %s\n", FW_VERSION);
+  Serial.printf("📦\tGitHub Repo: %s\n", GITHUB_REPO);
 
   // initialize the display
   display.init();
@@ -518,6 +528,9 @@ void setup() {
   // Remove all preferences under the opened namespace
   // preferences.clear();
   Serial.printf("Number of free entries in prefs: %d\n", preferences.freeEntries());
+
+  // Initialize OTA updater (must be after preferences.begin())
+  OtaUpdater::begin(preferences);
 
   unsigned int boot_count = preferences.getUInt("boot_count", 0);
   // Increment boot number and print it every reboot
@@ -640,6 +653,20 @@ void setup() {
   for (int i = 0; i < 200; i++) {
     mqttClient.loop();  // Ensure we've sent & received everything
     delay(10);
+  }
+
+  // ── OTA update check ──
+  // Periodically (every 24h of uptime) check GitHub for new firmware releases.
+  // The check is throttled internally (kCheckIntervalUptime) and only hits
+  // the network once per day.  If an update is found, startUpdate() downloads
+  // the .bin asset, flashes via the ESP32 Update library, and reboots — the
+  // device never reaches deep sleep on that cycle.
+  if (OtaUpdater::checkForUpdate(total_uptime)) {
+    Serial.println("⬆️\tOTA: New firmware available! Starting update...");
+    // startUpdate() calls ESP.restart() on success — never returns
+    if (!OtaUpdater::startUpdate()) {
+      Serial.println("⚠️\tOTA: Update failed, will retry on next wake cycle");
+    }
   }
 
   Serial.printf("😴\tGoing to sleep now for %d sec.\n", (TIME_TO_SLEEP_SECONDS));
