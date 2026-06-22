@@ -20,7 +20,7 @@ carefully before submitting your first pull request.
 
 ---
 
-## 🤝 Code of Conduct
+## Code of Conduct
 
 This project adheres to the
 [Contributor Covenant](https://www.contributor-covenant.org/version/1/4/code-of-conduct.html).
