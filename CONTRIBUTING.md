@@ -16,7 +16,7 @@ carefully before submitting your first pull request.
 - [Pull Request Process](#Pull Request Process)
 - [Commit Message Guidelines](#Commit Message Guidelines)
 - [Quality Gates](#Quality Gates)
-- [Resources](#Resources)
+- [Additional Resources](#Additional Resources)
 
 ---
 
