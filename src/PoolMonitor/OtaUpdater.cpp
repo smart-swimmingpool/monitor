@@ -16,6 +16,8 @@
 #include <WiFiClientSecure.h>
 #include <Update.h>
 
+namespace PoolMonitor {
+
 // ISRG Root X1 — Let's Encrypt root CA used by GitHub
 // https://letsencrypt.org/certificates/
 // SHA256: 96:bcec:0626:4976:f374:6077:9acf:28c5:a7cf:e8a3:c0aa:e11a:8ffe:ce05:c0bd:df08:c6
@@ -61,6 +63,10 @@ String OtaUpdater::downloadUrl_;
 bool OtaUpdater::updateAvailable_ = false;
 bool OtaUpdater::updateInProgress_ = false;
 int OtaUpdater::progress_ = 0;
+
+}  // namespace PoolMonitor
+
+namespace PoolMonitor {
 
 // ── Public API ──
 
@@ -436,3 +442,5 @@ bool OtaUpdater::downloadAndApply(const String &url) {
   ESP.restart();
   return true;  // Never actually reached
 }
+
+}  // namespace PoolMonitor

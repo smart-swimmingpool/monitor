@@ -16,21 +16,25 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 
 ## Features
 
-* [x] configurable MQTT server
-* [x] automatically connect to MQTT messages of pool controller
-* [x] open hotspot (captivate / hotspot) to configure WiFi and MQTT server
+* [x] Configurable MQTT server
+* [x] Automatically connect to MQTT messages of pool controller
+* [x] Open hotspot (captive portal) to configure WiFi and MQTT server
 * [x] [Home Assistant](https://www.home-assistant.io/) MQTT Discovery compatible (reads pool-controller state topics)
-* [x] Timesync via NTP (europe.pool.ntp.org)
+* [x] Time sync via NTP (europe.pool.ntp.org)
+* [x] Deep sleep operation for battery-powered use
+* [x] OTA firmware updates via GitHub Releases
+* [x] System monitoring with watchdog and memory checks
+* [x] Boot-loop detection for reliable operation
 
 ## Planned Features
 
-* [ ] solar powering using solar panel
-* [ ] nice case to place outdoor at pool
-* [ ] support of different displays
-* [ ] ability to switch on/off solar heating
-* [ ] ability to switch on/off pool pump
-* [ ] ability to change controller mode (auto, manual , ...)
-* [ ] ability to configure pool controller
+* [ ] Solar powering using solar panel
+* [ ] Nice case to place outdoor at pool
+* [ ] Support of different displays
+* [ ] Ability to switch on/off solar heating
+* [ ] Ability to switch on/off pool pump
+* [ ] Ability to change controller mode (auto, manual, ...)
+* [ ] Ability to configure pool controller
 
 ## Guides
 
@@ -38,6 +42,31 @@ The _Pool Monitor_ is a small additional device to show current pool data using 
 * [Hardware Guide](docs/hardware-guide.md)
 * [Software Guide](docs/software-guide.md)
 * [Home Assistant Migration Notes](docs/home-assistant-migration.md)
+
+## Architecture
+
+The Pool Monitor follows the same architectural patterns as the Pool Controller for consistency and maintainability:
+
+### Namespace Structure
+
+All code is organized under the `PoolMonitor` namespace, matching the `PoolController` namespace pattern.
+
+### Class Structure
+
+- **PoolMonitorContext**: Main singleton context that owns all subsystems
+- **SystemMonitor**: Watchdog, memory monitoring, and boot-loop detection
+- **NetworkManager**: WiFi and MQTT connection management
+- **DisplayManager**: E-Ink display management
+- **OtaUpdater**: OTA firmware update checker and installer
+- **TimeClientHelper**: NTP time client and timezone support
+
+### Key Design Principles
+
+1. **RAII**: Resources are managed through constructors/destructors
+2. **Singleton Pattern**: Subsystems are accessed through static methods
+3. **Dependency Injection**: Preferences and other dependencies are passed during initialization
+4. **Error Handling**: Graceful degradation with clear error messages
+5. **Memory Safety**: Stack-allocated buffers instead of heap allocation where possible
 
 ## Quality Checks
 
