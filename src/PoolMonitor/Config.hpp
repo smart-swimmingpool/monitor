@@ -60,7 +60,7 @@ constexpr std::uint8_t PIN_ELINK_SS{5};
 /** @brief SPI MOSI pin for display. */
 constexpr std::uint8_t PIN_SPI_MOSI{23};
 /** @brief SPI MISO pin for display (not used). */
-constexpr std::uint8_t PIN_SPI_MISO{-1};
+constexpr std::int8_t PIN_SPI_MISO{-1};
 /** @brief SPI CLK pin for display. */
 constexpr std::uint8_t PIN_SPI_CLK{18};
 
@@ -73,8 +73,10 @@ constexpr std::uint8_t PIN_LED_BUILTIN{2};
 /** @brief Device name for mDNS and MQTT client ID. */
 constexpr const char* DEVICE_NAME{"pool-monitor"};
 
-/** @brief GitHub repository for OTA updates. */
+/** @brief GitHub repository for OTA updates (provided via -D build flag). */
+#ifndef GITHUB_REPO
 constexpr const char* GITHUB_REPO{"smart-swimmingpool/monitor"};
+#endif
 
 // Serial speed - provided as build flag from platformio.ini
 #ifndef SERIAL_SPEED

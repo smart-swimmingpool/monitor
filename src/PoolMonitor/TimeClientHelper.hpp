@@ -22,13 +22,13 @@ extern NTPClient timeClient;
 constexpr uint8_t INVALID_HOUR_VALUE = 255;
 
 // Central European Time (Frankfurt, Paris)
-TimeChangeRule CEST = {"CEST", Last, Sun, Mar, 2, 120};  // Central European Summer Time
-TimeChangeRule CET  = {"CET ", Last, Sun, Oct, 3, 60};   // Central European Standard Time
-Timezone CE(CEST, CET);
+extern TimeChangeRule CEST;
+extern TimeChangeRule CET;
+extern Timezone CE;
 
 // UTC
-TimeChangeRule utcRule = {"UTC", Last, Sun, Mar, 1, 0};  // UTC
-Timezone UTC(utcRule);
+extern TimeChangeRule utcRule;
+extern Timezone UTC;
 
 extern Timezone currentTZ;
 

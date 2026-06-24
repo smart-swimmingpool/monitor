@@ -9,29 +9,20 @@
 #include "Config.hpp"
 #include "../Version.h"
 
-// Include the appropriate display driver based on board definition
-#if defined(LILYGO_T5_V231)
-#include <GxDEPG0213BN.h>
-#else
-#include <GxGDE0213B1.h>
-#endif
-
 namespace PoolMonitor {
 
 // Initialize static members
-#if defined(LILYGO_T5_V231)
-GxDEPG0213BN DisplayManager::display_(GxEPD::GxEPD_Class::GxEPD_213_BN);
-#else
-GxGDE0213B1 DisplayManager::display_(GxEPD::GxEPD_Class::GxEPD_213_B1);
-#endif
-U8G2_FOR_ADAFRUIT_GFX DisplayManager::u8g2_for_adafruit_gfx_(DisplayManager::display_);
+GxIO_Class DisplayManager::io_(SPI, PIN_ELINK_SS, PIN_ELINK_DC, PIN_SPI_CLK);
+GxEPD_Class DisplayManager::display_(DisplayManager::io_, PIN_ELINK_RESET,
+                                     PIN_ELINK_BUSY);
+U8G2_FOR_ADAFRUIT_GFX DisplayManager::u8g2_for_adafruit_gfx_;
 
 bool DisplayManager::begin() {
   Serial.println("🖥️\tInitializing display...");
-  
+
   display_.init();
   u8g2_for_adafruit_gfx_.begin(display_);
-  
+
   return true;
 }
 
@@ -48,12 +39,12 @@ void DisplayManager::displayText(const char* text, int16_t y, uint8_t align, int
       x = display_.width() / 2 + xOffset;
       break;
   }
-  
-  int16_t textWidth = 0;
-  int16_t textHeight = 0;
-  display_.getTextBounds(text, 0, 0, &x, &y, &textWidth, &textHeight);
-  
-  int16_t cursorY = y - textHeight / 2;
+
+  int16_t x1 = 0, y1 = 0;
+  uint16_t textWidth = 0, textHeight = 0;
+  display_.getTextBounds(text, 0, 0, &x1, &y1, &textWidth, &textHeight);
+
+  int16_t cursorY = y - static_cast<int16_t>(textHeight) / 2;
   display_.setCursor(x, cursorY);
   display_.print(text);
 }
@@ -73,21 +64,21 @@ void DisplayManager::initDisplay() {
   // Draw pool icon
   u8g2_for_adafruit_gfx_.setFont(u8g2_font_streamline_all_t);
   u8g2_for_adafruit_gfx_.drawGlyph(4, 50, 0x02a6); /* hex pool */
-  
+
   display_.setFont(&FreeSans12pt7b);
   displayText("     Pool:", 50, GxEPD_ALIGN_LEFT);
 
   // Draw solar icon
   u8g2_for_adafruit_gfx_.setFont(u8g2_font_streamline_ecology_t);
   u8g2_for_adafruit_gfx_.drawGlyph(4, 94, 0x003E); /* hex 3E solar panel */
-  
+
   display_.setFont(&FreeSans12pt7b);
   displayText("     Solar:", 94, GxEPD_ALIGN_LEFT);
 
   // Draw separator lines
   display_.drawLine(0, 102, display_.width(), 102, GxEPD_BLACK);
   display_.drawLine(0, 103, display_.width(), 103, GxEPD_BLACK);
-  
+
   display_.setFont(&FreeSans9pt7b);
   displayText("www.smart-swimmingpool.com", 117, GxEPD_ALIGN_LEFT);
 
@@ -100,7 +91,7 @@ void DisplayManager::initDisplay() {
   fullUpdate();
 }
 
-void DisplayManager::updateDisplay(float poolTemp, float solarTemp, bool poolPumpOn, 
+void DisplayManager::updateDisplay(float poolTemp, float solarTemp, bool poolPumpOn,
                                    bool solarPumpOn, const char* mode, const char* lastUpdate) {
   Serial.println("🖥️\tUpdating display");
 
@@ -123,7 +114,7 @@ void DisplayManager::updateDisplay(float poolTemp, float solarTemp, bool poolPum
 
   display_.setTextColor(GxEPD_BLACK);
   display_.setFont(&FreeSansBold24pt7b);
-  
+
   // Pool temperature
   snprintf(buffer, sizeof(buffer), "%2.1f C", poolTemp);
   displayText(buffer, 50, GxEPD_ALIGN_RIGHT);
@@ -176,7 +167,7 @@ uint16_t DisplayManager::getHeight() {
   return display_.height();
 }
 
-auto DisplayManager::getDisplay() -> GxEPD::GxEPD_Class& {
+auto DisplayManager::getDisplay() -> GxEPD_Class& {
   return display_;
 }
 
