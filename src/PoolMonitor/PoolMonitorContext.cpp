@@ -9,10 +9,11 @@
 #include "PoolMonitorContext.hpp"
 
 #include <Arduino.h>
+#include <ESPmDNS.h>
 #include <SPIFFS.h>
 #include <WiFi.h>
-#include <ESPmDNS.h>
 #include <WiFiSettings.h>
+#include <qrcode.h>
 
 #include "Config.hpp"
 #include "SystemMonitor.hpp"
@@ -22,11 +23,11 @@
 #include "TimeClientHelper.hpp"
 #include "../Version.h"
 
-#include <qrcode.h>
-
-using namespace PoolMonitor;
-
 namespace PoolMonitor {
+
+// Static member definitions
+String PoolMonitorContext::mqtt_server;
+uint16_t PoolMonitorContext::mqtt_server_port = 1883;
 
 // Static context instance
 static PoolMonitorContext *Self = nullptr;
@@ -153,7 +154,7 @@ auto PoolMonitorContext::setup() -> void {
   }
 
   // Update display with loaded state
-  DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_, 
+  DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
                                 poolMode_.c_str(), lastUpdate_.c_str());
 }
 
@@ -202,7 +203,7 @@ auto PoolMonitorContext::prepareForSleep() -> void {
   esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_SECONDS * 1000000);
   pinMode(PIN_MODEM_POWER_ON, OUTPUT);
   digitalWrite(PIN_MODEM_POWER_ON, LOW);
-  
+
   esp_deep_sleep_start();
 }
 
@@ -211,7 +212,7 @@ auto PoolMonitorContext::initializeDisplay() -> void {
     Serial.println("🛑\tFailed to initialize display");
     return;
   }
-  
+
   DisplayManager::initDisplay();
 }
 
@@ -276,7 +277,7 @@ void PoolMonitorContext::showSetupScreen() {
   DisplayManager::getDisplay().setRotation(3);
 
   // Draw QR code (right side)
-  drawQrCode(qrContent.c_str(), DisplayManager::getDisplay().width() - 66 - 5, 
+  drawQrCode(qrContent.c_str(), DisplayManager::getDisplay().width() - 66 - 5,
              (DisplayManager::getDisplay().height() - 66) / 2, 2);
 
   // Draw text info (left side)
@@ -329,9 +330,9 @@ void PoolMonitorContext::showWiFiConnectedScreen() {
   }
 
   Serial.printf("Connecting to %s\n", PoolMonitorContext::mqtt_server.c_str());
-  
+
   // Connect to MQTT
-  if (NetworkManager::beginMqtt(PoolMonitorContext::mqtt_server.c_str(), 
+  if (NetworkManager::beginMqtt(PoolMonitorContext::mqtt_server.c_str(),
                                 PoolMonitorContext::mqtt_server_port, DEVICE_NAME)) {
     Serial.println("MQTT connected");
   }
@@ -340,41 +341,41 @@ void PoolMonitorContext::showWiFiConnectedScreen() {
 auto PoolMonitorContext::initializeNetwork() -> void {
   // Configure WiFiSettings
   WiFiSettings.hostname = DEVICE_NAME;
-  
+
   // Set up callbacks for WiFiSettings
   WiFiSettings.onPortal = []() {
     Serial.println("⚙️\tConfiguration portal active");
     // Show setup screen on display
     showSetupScreen();
   };
-  
+
   WiFiSettings.onSuccess = []() {
     Serial.println("✅\tWiFi connected successfully");
     showWiFiConnectedScreen();
   };
-  
+
   WiFiSettings.onFailure = []() {
     Serial.println("🛑\tWiFi connection failed");
     showWiFiConnectionFailedScreen();
   };
-  
+
   WiFiSettings.onConfigSaved = []() {
     Serial.println("💾\tConfiguration saved - restarting");
     preferences_->end();
     ESP.restart();
   };
-  
+
   // Define custom settings for MQTT
   PoolMonitorContext::mqtt_server = WiFiSettings.string("mqtt_server", "", "MQTT Hostname");
   PoolMonitorContext::mqtt_server_port = WiFiSettings.integer("mqtt_port", 1, 65535, 1883, "MQTT Port");
-  
+
   // Save MQTT settings to preferences for later use
   preferences_->putString("mqtt_server", PoolMonitorContext::mqtt_server);
   preferences_->putUInt("mqtt_port", PoolMonitorContext::mqtt_server_port);
-  
+
   // Connect to WiFi with timeout
   WiFiSettings.connect(true, 45);
-  
+
   if (!NetworkManager::isWiFiConnected()) {
     Serial.println("🛑\tWiFi connection failed - starting configuration portal");
     // Start the configuration portal
@@ -385,14 +386,14 @@ auto PoolMonitorContext::initializeNetwork() -> void {
 auto PoolMonitorContext::initializeMqtt() -> void {
   // MQTT settings are already loaded from WiFiSettings in initializeNetwork
   // and saved to preferences, so we can use the static variables
-  
+
   if (PoolMonitorContext::mqtt_server.length() == 0) {
     Serial.println("⚠️\tNo MQTT server configured");
     return;
   }
 
   // Connect to MQTT
-  if (!NetworkManager::beginMqtt(PoolMonitorContext::mqtt_server.c_str(), 
+  if (!NetworkManager::beginMqtt(PoolMonitorContext::mqtt_server.c_str(),
                                 PoolMonitorContext::mqtt_server_port, DEVICE_NAME)) {
     Serial.println("⚠️\tMQTT connection failed");
     return;
@@ -409,7 +410,7 @@ auto PoolMonitorContext::initializeMqtt() -> void {
     HA_TOPIC_SOLAR_PUMP,
     HA_TOPIC_MODE
   };
-  
+
   size_t successfulSubscriptions = 0;
   for (size_t i = 0; i < sizeof(subscriptions) / sizeof(subscriptions[0]); i++) {
     if (!NetworkManager::subscribe(subscriptions[i])) {
@@ -418,7 +419,7 @@ auto PoolMonitorContext::initializeMqtt() -> void {
       successfulSubscriptions++;
     }
   }
-  
+
   Serial.printf("📡\tMQTT subscriptions successful: %u/%u\n",
                 static_cast<unsigned int>(successfulSubscriptions),
                 static_cast<unsigned int>(sizeof(subscriptions) / sizeof(subscriptions[0])));
@@ -437,11 +438,11 @@ auto PoolMonitorContext::loadState() -> void {
   solarPumpOn_ = preferences_->getBool("pump_solar", false);
   poolMode_ = preferences_->getString("pool_mode", "unknown");
   lastUpdate_ = preferences_->getString("last_update", "??:??");
-  
+
   Serial.printf("📥\tLoaded state: Pool=%.1f°C, Solar=%.1f°C, PoolPump=%s, SolarPump=%s, Mode=%s\n",
-                poolTemp_, solarTemp_, poolPumpOn_ ? "ON" : "OFF", solarPumpOn_ ? "ON" : "OFF", 
+                poolTemp_, solarTemp_, poolPumpOn_ ? "ON" : "OFF", solarPumpOn_ ? "ON" : "OFF",
                 poolMode_.c_str());
-  
+
   stateLoaded_ = true;
 }
 
@@ -452,7 +453,7 @@ auto PoolMonitorContext::saveState() -> void {
   preferences_->putBool("pump_solar", solarPumpOn_);
   preferences_->putString("pool_mode", poolMode_);
   preferences_->putString("last_update", lastUpdate_);
-  
+
   Serial.println("💾\tState saved");
 }
 
@@ -462,7 +463,7 @@ static bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
     return false;
   }
   while (*lhs != '\0' && *rhs != '\0') {
-    if (std::tolower(static_cast<unsigned char>(*lhs)) != 
+    if (std::tolower(static_cast<unsigned char>(*lhs)) !=
         std::tolower(static_cast<unsigned char>(*rhs))) {
       return false;
     }
