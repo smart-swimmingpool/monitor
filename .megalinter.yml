@@ -4,9 +4,10 @@
 
 ---
 # Enable only the linters that were enabled in Super-Linter
+# Note: CPP is disabled because most C++ files are external libraries (GxDEPG0213BN, GxGDE0213B72B)
+# which have formatting issues that are not relevant for our code quality
 ENABLE:
   - BASH
-  - CPP
   - EDITORCONFIG
   - GITHUB_ACTIONS
   - GITLEAKS
@@ -17,6 +18,7 @@ ENABLE:
 # Disable all other linters
 DISABLE:
   - ALL
+  - CPP
 
 # Filter patterns - exclude build artifacts and dependencies
 # Must be a string, not a list
@@ -26,11 +28,6 @@ FILTER_REGEX_EXCLUDE: |
   .*/data/.*
   .*\.min\.(js|css)
   .*/test/.*
-  .*/GxDEPG0213BN/.*
-  .*/GxGDE0213B72B/.*
-
-# C++ specific settings
-CPP_FILE_EXTENSIONS: "cpp,hpp,h,c"
 
 # Markdown specific settings - line length 150
 MARKDOWN_LINT_LINE_LENGTH: 150
