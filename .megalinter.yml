@@ -26,6 +26,8 @@ FILTER_REGEX_EXCLUDE: |
   .*/data/.*
   .*\.min\.(js|css)
   .*/test/.*
+  .*/GxDEPG0213BN/.*
+  .*/GxGDE0213B72B/.*
 
 # C++ specific settings
 CPP_FILE_EXTENSIONS: "cpp,hpp,h,c"
