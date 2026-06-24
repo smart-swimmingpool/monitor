@@ -15,7 +15,7 @@ ENABLE:
   - MARKDOWN
   - YAML
 
-# Disable all other linters
+# Disable specific linters
 DISABLE:
   - ALL
   - CPP
