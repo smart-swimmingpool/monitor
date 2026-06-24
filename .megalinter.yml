@@ -17,7 +17,6 @@ ENABLE:
 
 # Disable specific linters
 DISABLE:
-  - ALL
   - CPP
 
 # Filter patterns - exclude build artifacts and dependencies
