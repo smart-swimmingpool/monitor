@@ -14,6 +14,9 @@
 
 #include <Arduino.h>
 #include <Preferences.h>
+#include "Config.hpp"
+
+namespace PoolMonitor {
 
 /**
  * @brief Checks GitHub Releases for new firmware, downloads and applies it via OTA.
@@ -26,7 +29,7 @@
  *  - If an update is found, startUpdate() downloads the .bin asset and reboots.
  */
 class OtaUpdater {
- public:
+public:
   OtaUpdater() = default;
 
   /// Must be called once during setup with an opened Preferences handle.
@@ -59,6 +62,7 @@ class OtaUpdater {
    * if less than kCheckIntervalUptime seconds have passed since the last
    * check, returns false immediately without hitting the network.
    *
+   * @param totalUptime Total uptime in seconds (across sleep cycles).
    * @return true if a newer release is available.
    */
   static bool checkForUpdate(unsigned long totalUptime);
@@ -82,7 +86,7 @@ class OtaUpdater {
   /// Max milliseconds without progress before aborting a stalled download.
   static constexpr unsigned long kDownloadTimeoutMs = 30000UL;
 
- private:
+private:
   // ── GitHub API ──
   static bool fetchLatestRelease();
 
@@ -108,3 +112,5 @@ class OtaUpdater {
 
   static constexpr int kOtaBufferSize = 4096;
 };
+
+}  // namespace PoolMonitor

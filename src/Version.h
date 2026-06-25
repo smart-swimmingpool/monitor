@@ -4,11 +4,11 @@
 // This file only provides a fallback for compilation without the build flag.
 // FW_VERSION is auto-maintained by release-please — do not edit manually.
 
-#ifndef SRC_VERSION_H_
-#define SRC_VERSION_H_
+#ifndef VERSION_H
+#define VERSION_H
 
 #ifndef FW_VERSION
 #define FW_VERSION "0.0.0"  // x-release-please-version
 #endif
 
-#endif  // SRC_VERSION_H_
+#endif  // VERSION_H

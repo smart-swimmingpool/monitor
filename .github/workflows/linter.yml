@@ -1,4 +1,4 @@
-name: MegaLinter
+name: Lint Code Base
 
 on: [push, pull_request]
 
@@ -8,5 +8,39 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: oxsecurity/megalinter@v7.1.0
+      - name: Checkout Code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Run Super-Linter
+        uses: super-linter/super-linter@v8.6.0
+        env:
+          VALIDATE_ALL_CODEBASE: false
+          JSCPD_CONFIG_FILE: .jscpd.json
+          JSCPD_THRESHOLD: 30
+          DEFAULT_BRANCH: main
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINTER_RULES_PATH: .
+
+          # PlatformIO project optimizations
+          FILTER_REGEX_EXCLUDE: .*/(\.pio|\.vscode|\.platformio|build|lib)/.*
+
+          # Enable relevant linters for this repository
+          VALIDATE_CPP: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_YAML: true
+          VALIDATE_JSON: true
+          VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_EDITORCONFIG: true
+          VALIDATE_GITLEAKS: true
+          VALIDATE_BASH: true
+
+          # C/C++ specific settings
+          CPP_FILE_EXTENSIONS: "cpp,hpp,h"
+
+          # Don't treat warnings as errors
+          WARNINGS_AS_ERRORS: false
+
+          # Logging
+          LOG_LEVEL: NOTICE
