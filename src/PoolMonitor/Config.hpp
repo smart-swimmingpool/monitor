@@ -32,6 +32,15 @@ constexpr std::uint32_t DISPLAY_UPDATE_INTERVAL{30};
 constexpr std::uint32_t TIME_TO_SLEEP_SECONDS{180};
 
 /**
+ * @brief Number of wake cycles to skip WiFi/MQTT to save power.
+ *
+ * WiFi/MQTT connects only every (SKIP_WIFI_WAKE_CYCLES + 1) wake cycles.
+ * Default: 5 → WiFi every ~15 minutes (6 × 180s).
+ * Set to 0 to connect every cycle (original behavior).
+ */
+constexpr std::uint32_t SKIP_WIFI_WAKE_CYCLES{5};
+
+/**
  * @brief NTP sync interval (seconds).
  */
 constexpr std::uint32_t NTP_SYNC_INTERVAL_SECONDS{3600};

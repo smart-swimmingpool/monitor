@@ -10,7 +10,6 @@
 
 #include <Arduino.h>
 #include <ESPmDNS.h>
-#include <SPIFFS.h>
 #include <WiFi.h>
 #include <WiFiSettings.h>
 #include <qrcode.h>
@@ -100,26 +99,41 @@ auto PoolMonitorContext::setup() -> void {
   preferences_->putULong("total_uptime", total_uptime);
   Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
 
-  // Initialize SPIFFS
-  SPIFFS.begin(true);
+  // ── Power-save: WiFi/MQTT only every (SKIP_WIFI_WAKE_CYCLES + 1) wake-ups ──
+  uint32_t cyclesWithoutWiFi = preferences_->getUInt("no_wifi_count", 0);
+  bool doNetwork = (cyclesWithoutWiFi >= SKIP_WIFI_WAKE_CYCLES);
+
+  if (doNetwork) {
+    preferences_->putUInt("no_wifi_count", 0);
+  } else {
+    preferences_->putUInt("no_wifi_count", cyclesWithoutWiFi + 1);
+  }
+  Serial.printf("📡\tNetwork cycle: %s (%u/%u without WiFi)\n",
+                doNetwork ? "YES" : "NO",
+                doNetwork ? 0 : cyclesWithoutWiFi + 1,
+                SKIP_WIFI_WAKE_CYCLES);
 
   // Initialize NTP time client
   PoolMonitor::beginTimeClient();
 
-  // Initialize display
+  // Initialize display (always, shows cached data from preferences)
   initializeDisplay();
 
-  // Initialize network
-  initializeNetwork();
-
-  // Initialize MQTT
-  initializeMqtt();
+  // Connect network only on network cycles
+  if (doNetwork) {
+    initializeNetwork();
+    initializeMqtt();
+  } else {
+    // Load MQTT settings from preferences for status display
+    mqtt_server = preferences_->getString("mqtt_server", "");
+    mqtt_server_port = preferences_->getUInt("mqtt_port", 1883);
+  }
 
   // Load saved state
   loadState();
 
-  // Check if NTP sync is needed
-  if (isNtpSyncNeeded()) {
+  // NTP sync or time reconstruction
+  if (doNetwork && isNtpSyncNeeded()) {
     Serial.println("⏰\tNTP sync needed - updating time from server");
     lastUpdate_ = PoolMonitor::getCurrentTime();
     preferences_->putString("last_update", lastUpdate_);
@@ -134,8 +148,6 @@ auto PoolMonitorContext::setup() -> void {
     Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
                   lastUpdate_.c_str(), NTP_SYNC_INTERVAL_SECONDS);
   } else {
-    Serial.println("⏰\tNTP sync skipped - using cached time from stored epoch and uptime");
-
     // Reconstruct current time based on last known epoch and elapsed uptime since last sync
     unsigned long last_epoch = preferences_->getULong("last_epoch", 0);
     unsigned long last_ntp_sync = preferences_->getULong("last_ntp_sync", 0);
@@ -153,9 +165,27 @@ auto PoolMonitorContext::setup() -> void {
     preferences_->putString("last_update", lastUpdate_);
   }
 
-  // Update display with loaded state
-  DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
-                                poolMode_.c_str(), lastUpdate_.c_str());
+  // ── Change detection: only update display if sensor data changed ──
+  bool dataChanged = (poolTemp_ != preferences_->getFloat("last_display_pool", -999.0f) ||
+                      solarTemp_ != preferences_->getFloat("last_display_solar", -999.0f) ||
+                      poolPumpOn_ != preferences_->getBool("last_display_ppump", false) ||
+                      solarPumpOn_ != preferences_->getBool("last_display_spump", false) ||
+                      poolMode_ != preferences_->getString("last_display_mode", ""));
+
+  if (dataChanged) {
+    Serial.println("🖥️\tData changed - updating display");
+    DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
+                                  poolMode_.c_str(), lastUpdate_.c_str());
+
+    // Remember displayed values for next comparison
+    preferences_->putFloat("last_display_pool", poolTemp_);
+    preferences_->putFloat("last_display_solar", solarTemp_);
+    preferences_->putBool("last_display_ppump", poolPumpOn_);
+    preferences_->putBool("last_display_spump", solarPumpOn_);
+    preferences_->putString("last_display_mode", poolMode_);
+  } else {
+    Serial.println("🖥️\tNo data change - skipping display update (saving power)");
+  }
 }
 
 auto PoolMonitorContext::loop() -> void {
@@ -168,9 +198,9 @@ auto PoolMonitorContext::loop() -> void {
   // Process MQTT messages
   NetworkManager::loop();
 
-  // Process OTA update check
+  // Process OTA update check (only when WiFi connected, saves power on skip cycles)
   unsigned long total_uptime = preferences_->getULong("total_uptime", 0);
-  if (OtaUpdater::checkForUpdate(total_uptime)) {
+  if (NetworkManager::isWiFiConnected() && OtaUpdater::checkForUpdate(total_uptime)) {
     Serial.println("⬆️\tOTA: New firmware available! Starting update...");
     if (!OtaUpdater::startUpdate()) {
       Serial.println("⚠️\tOTA: Update failed, will retry on next wake cycle");
@@ -192,9 +222,6 @@ auto PoolMonitorContext::prepareForSleep() -> void {
 
   // Power down display
   DisplayManager::powerDown();
-
-  // Close SPIFFS
-  SPIFFS.end();
 
   // Close preferences
   preferences_->end();
@@ -424,8 +451,8 @@ auto PoolMonitorContext::initializeMqtt() -> void {
                 static_cast<unsigned int>(successfulSubscriptions),
                 static_cast<unsigned int>(sizeof(subscriptions) / sizeof(subscriptions[0])));
 
-  // Process retained messages
-  for (int i = 0; i < 200; i++) {
+  // Process retained messages (reduced from 200 to save power)
+  for (int i = 0; i < 50; i++) {
     NetworkManager::loop();
     delay(10);
   }
