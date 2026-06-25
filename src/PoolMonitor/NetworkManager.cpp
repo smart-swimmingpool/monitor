@@ -21,33 +21,33 @@ String NetworkManager::hostname_ = "";
 
 bool NetworkManager::begin(const char* hostname, uint32_t timeoutSeconds) {
   hostname_ = hostname;
-  
+
   Serial.printf("Connecting to WiFi with hostname: %s\n", hostname);
-  
+
   // Try to connect to WiFi
   WiFi.begin();
-  
+
   unsigned long startTime = millis();
-  while (WiFi.status() != WL_CONNECTED && 
+  while (WiFi.status() != WL_CONNECTED &&
          (millis() - startTime) < (timeoutSeconds * 1000)) {
     delay(100);
     Serial.print(".");
   }
-  
+
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("");
     Serial.printf("WiFi connected. IP: %s\n", WiFi.localIP().toString().c_str());
-    
+
     // Start mDNS
     if (MDNS.begin(hostname)) {
       Serial.printf("mDNS responder started: %s.local\n", hostname);
       mdnsRunning_ = true;
     }
-    
+
     apModeActive_ = false;
     return true;
   }
-  
+
   Serial.println("");
   Serial.println("WiFi connection failed");
   apModeActive_ = true;
@@ -56,9 +56,9 @@ bool NetworkManager::begin(const char* hostname, uint32_t timeoutSeconds) {
 
 bool NetworkManager::beginMqtt(const char* server, uint16_t port, const char* clientId) {
   mqttClient_.setServer(server, port);
-  
+
   Serial.printf("Attempting MQTT connection to %s:%u...\n", server, port);
-  
+
   if (mqttClient_.connect(clientId)) {
     Serial.println("MQTT connected");
     return true;
@@ -80,10 +80,6 @@ bool NetworkManager::isWiFiConnected() {
 
 bool NetworkManager::isMqttConnected() {
   return mqttClient_.connected();
-}
-
-bool NetworkManager::isApMode() {
-  return apModeActive_;
 }
 
 bool NetworkManager::publish(const char* topic, const char* payload, bool retained) {
@@ -113,22 +109,6 @@ void NetworkManager::disconnectMqtt() {
   if (mqttClient_.connected()) {
     mqttClient_.disconnect();
   }
-}
-
-int NetworkManager::getWiFiRSSI() {
-  return WiFi.status() == WL_CONNECTED ? WiFi.RSSI() : 0;
-}
-
-String NetworkManager::getLocalIP() {
-  return WiFi.localIP().toString();
-}
-
-PubSubClient& NetworkManager::getMqttClient() {
-  return mqttClient_;
-}
-
-void NetworkManager::connectMqtt() {
-  // This is handled by beginMqtt
 }
 
 }  // namespace PoolMonitor

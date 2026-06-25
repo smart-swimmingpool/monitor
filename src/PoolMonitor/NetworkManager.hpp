@@ -59,9 +59,6 @@ public:
   /** @brief Check if MQTT is connected. */
   static bool isMqttConnected();
 
-  /** @brief Check if in access-point mode. */
-  static bool isApMode();
-
   /**
    * @brief Publish an MQTT message.
    * @param topic MQTT topic.
@@ -87,15 +84,6 @@ public:
   /** @brief Disconnect from MQTT broker. */
   static void disconnectMqtt();
 
-  /** @brief Get WiFi RSSI. */
-  static int getWiFiRSSI();
-
-  /** @brief Get local IP address. */
-  static String getLocalIP();
-
-  /** @brief Get MQTT client instance. */
-  static PubSubClient& getMqttClient();
-
 private:
   static WiFiClient wifiClient_;
   static PubSubClient mqttClient_;
@@ -103,8 +91,6 @@ private:
   static bool apModeActive_;
   static bool mdnsRunning_;
   static String hostname_;
-
-  static void connectMqtt();
 };
 
 }  // namespace PoolMonitor

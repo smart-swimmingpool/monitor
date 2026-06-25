@@ -74,13 +74,13 @@ public:
    * window between wakeup and sleep.
    */
   static void checkMemory(bool forceCheck = false) {
-    uint32_t now = millis();
+    uint32_t currentMillis = millis();
 
     // Check every 10 seconds, or immediately if forced
-    if (!forceCheck && now - lastMemoryCheck < 10000) {
+    if (!forceCheck && currentMillis - lastMemoryCheck < 10000) {
       return;
     }
-    lastMemoryCheck = now;
+    lastMemoryCheck = currentMillis;
 
     uint32_t freeHeap = ESP.getFreeHeap();
 
@@ -91,7 +91,7 @@ public:
 
     // Critical memory — reboot immediately
     if (freeHeap < CRITICAL_MEMORY_THRESHOLD) {
-      Serial.printf("CRITICAL: Free heap %d bytes < %d bytes. Rebooting...\n", 
+      Serial.printf("CRITICAL: Free heap %d bytes < %d bytes. Rebooting...\n",
                     freeHeap, CRITICAL_MEMORY_THRESHOLD);
       Serial.flush();
       delay(1000);

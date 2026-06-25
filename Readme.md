@@ -1,4 +1,4 @@
-# Pool Monitor | 🏊 Smart Swimmingpool
+# Pool Monitor | Smart Swimmingpool
 
 [![Smart Swimmingpool](https://img.shields.io/badge/%F0%9F%8F%8A%20-Smart%20Swimmingpool-blue.svg)](https://github.com/smart-swimmingpool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)

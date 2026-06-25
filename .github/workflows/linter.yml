@@ -1,40 +1,12 @@
----
-###########################
-###########################
-## Linter GitHub Actions ##
-###########################
-###########################
 name: Lint Code Base
 
-#
-# Documentation:
-# https://help.github.com/en/articles/workflow-syntax-for-github-actions
-#
+on: [push, pull_request]
 
-on:
-  push:
-  pull_request:
-
-# Cancel in-progress runs for the same workflow+ref when new commits are pushed
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-
-###############
-# Set the Job #
-###############
 jobs:
-  super-linter:
-    name: Super-Linter
+  build:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      statuses: write
-
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7

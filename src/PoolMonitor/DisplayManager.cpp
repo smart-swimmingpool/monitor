@@ -171,8 +171,4 @@ auto DisplayManager::getDisplay() -> GxEPD_Class& {
   return display_;
 }
 
-auto DisplayManager::getU8g2() -> U8G2_FOR_ADAFRUIT_GFX& {
-  return u8g2_for_adafruit_gfx_;
-}
-
 }  // namespace PoolMonitor

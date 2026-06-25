@@ -95,9 +95,6 @@ class DisplayManager {
   /** @brief Get reference to the display instance. */
   static auto getDisplay() -> GxEPD_Class&;
 
-  /** @brief Get reference to the u8g2 instance. */
-  static auto getU8g2() -> U8G2_FOR_ADAFRUIT_GFX&;
-
   /**
    * @brief Draw text on display with alignment.
    * @param text Text to draw.
