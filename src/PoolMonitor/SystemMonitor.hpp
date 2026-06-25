@@ -91,7 +91,7 @@ public:
 
     // Critical memory — reboot immediately
     if (freeHeap < CRITICAL_MEMORY_THRESHOLD) {
-      Serial.printf("CRITICAL: Free heap %d bytes < %d bytes. Rebooting...\n", 
+      Serial.printf("CRITICAL: Free heap %d bytes < %d bytes. Rebooting...\n",
                     freeHeap, CRITICAL_MEMORY_THRESHOLD);
       Serial.flush();
       delay(1000);
