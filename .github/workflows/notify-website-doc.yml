@@ -30,4 +30,4 @@ jobs:
       - name: Warn on failed dispatch
         if: steps.dispatch.outcome == 'failure'
         run: |
-          echo "::warning::repository_dispatch to smart-swimmingpool/website failed (check HUGO_DEPLOY_TOKEN permissions/validity)."
+          echo "::warning::repository_dispatch failed (check HUGO_DEPLOY_TOKEN permissions)"

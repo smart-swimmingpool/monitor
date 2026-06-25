@@ -2,7 +2,6 @@
 
 Thank you for your interest in contributing to the **Smart Swimming Pool Monitor** project!
 
-
 This document provides guidelines for contributing to the project. Please read it
 carefully before submitting your first pull request.
 
