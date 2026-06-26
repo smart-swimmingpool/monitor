@@ -162,6 +162,11 @@ auto PoolMonitorContext::setup() -> void {
       reconstructTime(total_uptime);
     }
 
+    // Safety net: process any retained MQTT messages that arrived after polling
+    NetworkManager::loop();
+    // Reload state in case late messages updated preferences
+    loadState();
+
     // Always update display on network cycles (data was potentially refreshed)
     Serial.println("🖥️\tUpdating display");
     DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
@@ -473,8 +478,8 @@ auto PoolMonitorContext::initializeMqtt() -> void {
                 static_cast<unsigned int>(successfulSubscriptions),
                 static_cast<unsigned int>(sizeof(subscriptions) / sizeof(subscriptions[0])));
 
-  // Process retained messages (reduced from 200 to save power)
-  for (int i = 0; i < 50; i++) {
+  // Process retained messages (reduced from original 200 to save power)
+  for (int i = 0; i < 100; i++) {
     NetworkManager::loop();
     delay(10);
   }
