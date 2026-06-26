@@ -29,7 +29,7 @@ auto setup() -> void {
   // Wait for serial port to connect. Needed for native USB port only.
   // Non-blocking fallback for headless operation.
   const uint32_t startWait = millis();
-  while (!Serial && (millis() - startWait < 3000)) {
+  while (!Serial && (millis() - startWait < 1000)) {
     delay(10);
   }
 

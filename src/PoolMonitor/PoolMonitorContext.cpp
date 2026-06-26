@@ -122,12 +122,26 @@ auto PoolMonitorContext::setup() -> void {
   // Initialize NTP time client
   PoolMonitor::beginTimeClient();
 
-  // On network cycles: full display init + network + MQTT + display update
-  // On no-network cycles: E-Ink retains its image, skip all display ops
+  // ── Boot-loop safe mode ──
+  if (bootLoopDetected_) {
+    Serial.println("⚠️\tBoot loop detected! Entering safe mode — skipping network, using cached data");
+    initializeDisplay();
+    loadState();
+    reconstructTime(total_uptime);
+    DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
+                                  poolMode_.c_str(), lastUpdate_.c_str());
+    prepareForSleep();  // deep sleep, does not return
+  }
+
+  // ── On network cycles: full display init + network + MQTT + display update ──
+  // ── On no-network cycles: E-Ink retains its image, skip all display ops  ──
   if (doNetwork) {
     initializeDisplay();
     initializeNetwork();
     initializeMqtt();
+
+    // Boot successful — reached after WiFi + MQTT without crash
+    SystemMonitor::clearBootLoopCounter();
 
     // Load fresh data (MQTT callbacks may have updated NVS values)
     loadState();
@@ -137,7 +151,6 @@ auto PoolMonitorContext::setup() -> void {
       Serial.println("⏰\tNTP sync needed - updating time from server");
       lastUpdate_ = PoolMonitor::getCurrentTime();
       preferences_->putString("last_update", lastUpdate_);
-
       preferences_->putULong("last_ntp_sync", total_uptime);
 
       unsigned long synced_epoch = PoolMonitor::timeClient.getEpochTime();
