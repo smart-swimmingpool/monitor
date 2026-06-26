@@ -218,10 +218,30 @@ auto PoolMonitorContext::prepareForSleep() -> void {
     }
     time_t t = PoolMonitor::currentTZ.toLocal(lastEpoch + elapsed);
     int currentHour = ::hour(t);
+    int currentMinute = ::minute(t);
+    int currentSecond = ::second(t);
 
     if (currentHour >= static_cast<int>(NIGHT_START_HOUR) ||
         currentHour < static_cast<int>(NIGHT_END_HOUR)) {
       sleepSeconds = NIGHT_SLEEP_INTERVAL_SECONDS;
+
+      // Clamp night sleep so the device does not overshoot NIGHT_END_HOUR
+      int secondsUntilEnd;
+      if (currentHour >= static_cast<int>(NIGHT_START_HOUR)) {
+        // Night started today (22:xx-23:xx), end is tomorrow 06:xx
+        secondsUntilEnd = (static_cast<int>(NIGHT_END_HOUR) + 24 - currentHour) * 3600
+                          - currentMinute * 60 - currentSecond;
+      } else {
+        // Night continues today (00:xx-05:xx), end is today 06:xx
+        secondsUntilEnd = (static_cast<int>(NIGHT_END_HOUR) - currentHour) * 3600
+                          - currentMinute * 60 - currentSecond;
+      }
+
+      if (secondsUntilEnd > 60 && sleepSeconds > static_cast<uint32_t>(secondsUntilEnd)) {
+        sleepSeconds = secondsUntilEnd;
+        Serial.printf("🌙\tClamping night sleep to %d sec (wake at %02d:00)\n",
+                      sleepSeconds, NIGHT_END_HOUR);
+      }
     }
   }
 
