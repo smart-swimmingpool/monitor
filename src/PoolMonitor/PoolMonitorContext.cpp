@@ -98,9 +98,13 @@ auto PoolMonitorContext::setup() -> void {
 
   // Track cumulative uptime across sleep cycles
   unsigned long total_uptime = preferences_->getULong("total_uptime", 0);
-  total_uptime += TIME_TO_SLEEP_SECONDS;
+  // Use actual sleep duration from last cycle (supports night-mode 4h sleeps)
+  uint32_t lastSleepDuration = preferences_->getUInt("last_sleep_sec", TIME_TO_SLEEP_SECONDS);
+  total_uptime += lastSleepDuration;
+  preferences_->remove("last_sleep_sec");
   preferences_->putULong("total_uptime", total_uptime);
-  Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
+  Serial.printf("Total uptime: %lu seconds (%.1f hours, last sleep: %u s)\n",
+                total_uptime, total_uptime / 3600.0, lastSleepDuration);
 
   // ── Power-save: WiFi/MQTT only every (SKIP_WIFI_WAKE_CYCLES + 1) wake-ups ──
   uint32_t cyclesWithoutWiFi = preferences_->getUInt("no_wifi_count", 0);
@@ -225,6 +229,9 @@ auto PoolMonitorContext::prepareForSleep() -> void {
 
   // Save current state
   saveState();
+
+  // Persist actual sleep duration for correct uptime tracking next boot
+  preferences_->putUInt("last_sleep_sec", sleepSeconds);
 
   // Disconnect MQTT
   NetworkManager::disconnectMqtt();
