@@ -199,7 +199,29 @@ auto PoolMonitorContext::loop() -> void {
 }
 
 auto PoolMonitorContext::prepareForSleep() -> void {
-  Serial.printf("😴\tGoing to sleep now for %d sec.\n", TIME_TO_SLEEP_SECONDS);
+  // ── Determine sleep interval ──
+  uint32_t sleepSeconds = TIME_TO_SLEEP_SECONDS;
+
+  unsigned long totalUptime = preferences_->getULong("total_uptime", 0);
+  unsigned long lastEpoch = preferences_->getULong("last_epoch", 0);
+
+  if (lastEpoch > 0) {
+    // Reconstruct current local time to check if we're in the night window
+    unsigned long lastNtpSync = preferences_->getULong("last_ntp_sync", 0);
+    unsigned long elapsed = 0;
+    if (totalUptime > lastNtpSync) {
+      elapsed = totalUptime - lastNtpSync;
+    }
+    time_t t = PoolMonitor::currentTZ.toLocal(lastEpoch + elapsed);
+    int currentHour = ::hour(t);
+
+    if (currentHour >= static_cast<int>(NIGHT_START_HOUR) ||
+        currentHour < static_cast<int>(NIGHT_END_HOUR)) {
+      sleepSeconds = NIGHT_SLEEP_INTERVAL_SECONDS;
+    }
+  }
+
+  Serial.printf("😴\tGoing to sleep now for %d sec.\n", sleepSeconds);
 
   // Save current state
   saveState();
@@ -214,7 +236,7 @@ auto PoolMonitorContext::prepareForSleep() -> void {
   preferences_->end();
 
   // Enter deep sleep
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_SECONDS * 1000000);
+  esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
   pinMode(PIN_MODEM_POWER_ON, OUTPUT);
   digitalWrite(PIN_MODEM_POWER_ON, LOW);
 
