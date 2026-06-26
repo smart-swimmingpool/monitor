@@ -98,9 +98,13 @@ auto PoolMonitorContext::setup() -> void {
 
   // Track cumulative uptime across sleep cycles
   unsigned long total_uptime = preferences_->getULong("total_uptime", 0);
-  total_uptime += TIME_TO_SLEEP_SECONDS;
+  // Use actual sleep duration from last cycle (supports night-mode 4h sleeps)
+  uint32_t lastSleepDuration = preferences_->getUInt("last_sleep_sec", TIME_TO_SLEEP_SECONDS);
+  total_uptime += lastSleepDuration;
+  preferences_->remove("last_sleep_sec");
   preferences_->putULong("total_uptime", total_uptime);
-  Serial.printf("Total uptime: %lu seconds (%.1f hours)\n", total_uptime, total_uptime / 3600.0);
+  Serial.printf("Total uptime: %lu seconds (%.1f hours, last sleep: %u s)\n",
+                total_uptime, total_uptime / 3600.0, lastSleepDuration);
 
   // ── Power-save: WiFi/MQTT only every (SKIP_WIFI_WAKE_CYCLES + 1) wake-ups ──
   uint32_t cyclesWithoutWiFi = preferences_->getUInt("no_wifi_count", 0);
@@ -219,10 +223,55 @@ auto PoolMonitorContext::loop() -> void {
 }
 
 auto PoolMonitorContext::prepareForSleep() -> void {
-  Serial.printf("😴\tGoing to sleep now for %d sec.\n", TIME_TO_SLEEP_SECONDS);
+  // ── Determine sleep interval ──
+  uint32_t sleepSeconds = TIME_TO_SLEEP_SECONDS;
+
+  unsigned long totalUptime = preferences_->getULong("total_uptime", 0);
+  unsigned long lastEpoch = preferences_->getULong("last_epoch", 0);
+
+  if (lastEpoch > 0) {
+    // Reconstruct current local time to check if we're in the night window
+    unsigned long lastNtpSync = preferences_->getULong("last_ntp_sync", 0);
+    unsigned long elapsed = 0;
+    if (totalUptime > lastNtpSync) {
+      elapsed = totalUptime - lastNtpSync;
+    }
+    time_t t = PoolMonitor::currentTZ.toLocal(lastEpoch + elapsed);
+    int currentHour = ::hour(t);
+    int currentMinute = ::minute(t);
+    int currentSecond = ::second(t);
+
+    if (currentHour >= static_cast<int>(NIGHT_START_HOUR) ||
+        currentHour < static_cast<int>(NIGHT_END_HOUR)) {
+      sleepSeconds = NIGHT_SLEEP_INTERVAL_SECONDS;
+
+      // Clamp night sleep so the device does not overshoot NIGHT_END_HOUR
+      int secondsUntilEnd;
+      if (currentHour >= static_cast<int>(NIGHT_START_HOUR)) {
+        // Night started today (22:xx-23:xx), end is tomorrow 06:xx
+        secondsUntilEnd = (static_cast<int>(NIGHT_END_HOUR) + 24 - currentHour) * 3600
+                          - currentMinute * 60 - currentSecond;
+      } else {
+        // Night continues today (00:xx-05:xx), end is today 06:xx
+        secondsUntilEnd = (static_cast<int>(NIGHT_END_HOUR) - currentHour) * 3600
+                          - currentMinute * 60 - currentSecond;
+      }
+
+      if (secondsUntilEnd > 60 && sleepSeconds > static_cast<uint32_t>(secondsUntilEnd)) {
+        sleepSeconds = secondsUntilEnd;
+        Serial.printf("🌙\tClamping night sleep to %d sec (wake at %02d:00)\n",
+                      sleepSeconds, NIGHT_END_HOUR);
+      }
+    }
+  }
+
+  Serial.printf("😴\tGoing to sleep now for %d sec.\n", sleepSeconds);
 
   // Save current state
   saveState();
+
+  // Persist actual sleep duration for correct uptime tracking next boot
+  preferences_->putUInt("last_sleep_sec", sleepSeconds);
 
   // Disconnect MQTT
   NetworkManager::disconnectMqtt();
@@ -234,7 +283,7 @@ auto PoolMonitorContext::prepareForSleep() -> void {
   preferences_->end();
 
   // Enter deep sleep
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP_SECONDS * 1000000);
+  esp_sleep_enable_timer_wakeup(sleepSeconds * 1000000ULL);
   pinMode(PIN_MODEM_POWER_ON, OUTPUT);
   digitalWrite(PIN_MODEM_POWER_ON, LOW);
 
