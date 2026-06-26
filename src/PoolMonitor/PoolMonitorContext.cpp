@@ -51,6 +51,9 @@ const char* HA_TOPIC_POOL_PUMP = "homeassistant/switch/pool-controller/pool-pump
 const char* HA_TOPIC_SOLAR_PUMP = "homeassistant/switch/pool-controller/solar-pump/state";
 const char* HA_TOPIC_MODE = "homeassistant/select/pool-controller/mode/state";
 
+// Forward declaration
+static void reconstructTime(unsigned long total_uptime);
+
 PoolMonitorContext::PoolMonitorContext() {
   Self = this;
 }
@@ -101,7 +104,10 @@ auto PoolMonitorContext::setup() -> void {
 
   // ── Power-save: WiFi/MQTT only every (SKIP_WIFI_WAKE_CYCLES + 1) wake-ups ──
   uint32_t cyclesWithoutWiFi = preferences_->getUInt("no_wifi_count", 0);
-  bool doNetwork = (cyclesWithoutWiFi >= SKIP_WIFI_WAKE_CYCLES);
+
+  // Force network on first boot (no MQTT config exists yet → portal needed)
+  bool hasConfig = (preferences_->getString("mqtt_server", "").length() > 0);
+  bool doNetwork = !hasConfig || (cyclesWithoutWiFi >= SKIP_WIFI_WAKE_CYCLES);
 
   if (doNetwork) {
     preferences_->putUInt("no_wifi_count", 0);
@@ -116,64 +122,35 @@ auto PoolMonitorContext::setup() -> void {
   // Initialize NTP time client
   PoolMonitor::beginTimeClient();
 
-  // Initialize display (always, shows cached data from preferences)
-  initializeDisplay();
-
-  // Connect network only on network cycles
+  // On network cycles: full display init + network + MQTT + display update
+  // On no-network cycles: E-Ink retains its image, skip all display ops
   if (doNetwork) {
+    initializeDisplay();
     initializeNetwork();
     initializeMqtt();
-  } else {
-    // Load MQTT settings from preferences for status display
-    mqtt_server = preferences_->getString("mqtt_server", "");
-    mqtt_server_port = preferences_->getUInt("mqtt_port", 1883);
-  }
 
-  // Load saved state
-  loadState();
+    // Load fresh data (MQTT callbacks may have updated NVS values)
+    loadState();
 
-  // NTP sync or time reconstruction
-  if (doNetwork && isNtpSyncNeeded()) {
-    Serial.println("⏰\tNTP sync needed - updating time from server");
-    lastUpdate_ = PoolMonitor::getCurrentTime();
-    preferences_->putString("last_update", lastUpdate_);
+    // NTP sync
+    if (isNtpSyncNeeded()) {
+      Serial.println("⏰\tNTP sync needed - updating time from server");
+      lastUpdate_ = PoolMonitor::getCurrentTime();
+      preferences_->putString("last_update", lastUpdate_);
 
-    // Update last sync timestamp
-    preferences_->putULong("last_ntp_sync", total_uptime);
+      preferences_->putULong("last_ntp_sync", total_uptime);
 
-    // Store the epoch time at the moment of successful NTP sync
-    unsigned long synced_epoch = PoolMonitor::timeClient.getEpochTime();
-    preferences_->putULong("last_epoch", synced_epoch);
+      unsigned long synced_epoch = PoolMonitor::timeClient.getEpochTime();
+      preferences_->putULong("last_epoch", synced_epoch);
 
-    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
-                  lastUpdate_.c_str(), NTP_SYNC_INTERVAL_SECONDS);
-  } else {
-    // Reconstruct current time based on last known epoch and elapsed uptime since last sync
-    unsigned long last_epoch = preferences_->getULong("last_epoch", 0);
-    unsigned long last_ntp_sync = preferences_->getULong("last_ntp_sync", 0);
-
-    // Guard against underflow if stored values are inconsistent
-    unsigned long elapsed_since_sync = 0;
-    if (total_uptime > last_ntp_sync) {
-      elapsed_since_sync = total_uptime - last_ntp_sync;
+      Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
+                    lastUpdate_.c_str(), NTP_SYNC_INTERVAL_SECONDS);
+    } else {
+      reconstructTime(total_uptime);
     }
 
-    time_t t = PoolMonitor::currentTZ.toLocal(last_epoch + elapsed_since_sync);
-    char buf[10];
-    snprintf(buf, sizeof(buf), "%.2d:%.2d", hour(t), minute(t));
-    lastUpdate_ = String(buf);
-    preferences_->putString("last_update", lastUpdate_);
-  }
-
-  // ── Change detection: only update display if sensor data changed ──
-  bool dataChanged = (poolTemp_ != preferences_->getFloat("last_display_pool", -999.0f) ||
-                      solarTemp_ != preferences_->getFloat("last_display_solar", -999.0f) ||
-                      poolPumpOn_ != preferences_->getBool("last_display_ppump", false) ||
-                      solarPumpOn_ != preferences_->getBool("last_display_spump", false) ||
-                      poolMode_ != preferences_->getString("last_display_mode", ""));
-
-  if (dataChanged) {
-    Serial.println("🖥️\tData changed - updating display");
+    // Always update display on network cycles (data was potentially refreshed)
+    Serial.println("🖥️\tUpdating display");
     DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
                                   poolMode_.c_str(), lastUpdate_.c_str());
 
@@ -183,8 +160,18 @@ auto PoolMonitorContext::setup() -> void {
     preferences_->putBool("last_display_ppump", poolPumpOn_);
     preferences_->putBool("last_display_spump", solarPumpOn_);
     preferences_->putString("last_display_mode", poolMode_);
+
   } else {
-    Serial.println("🖥️\tNo data change - skipping display update (saving power)");
+    // No-network cycle: E-Ink retains image, skip all display operations
+    // Only reconstruct time and load cached state for bookkeeping
+    loadState();
+    reconstructTime(total_uptime);
+
+    // Load MQTT settings from preferences (for status display next cycle)
+    mqtt_server = preferences_->getString("mqtt_server", "");
+    mqtt_server_port = preferences_->getUInt("mqtt_port", 1883);
+
+    Serial.println("🖥️\tNo network — E-Ink retains image, display skipped (saving power)");
   }
 }
 
@@ -292,6 +279,26 @@ static void drawQrCode(const char* text, int16_t x, int16_t y, uint8_t scale) {
   }
 }
 
+/**
+ * @brief Reconstruct current time from last known epoch + elapsed uptime.
+ * Used on no-network cycles or when NTP sync interval hasn't elapsed.
+ */
+static void reconstructTime(unsigned long total_uptime) {
+  unsigned long last_epoch = preferences_->getULong("last_epoch", 0);
+  unsigned long last_ntp_sync = preferences_->getULong("last_ntp_sync", 0);
+
+  unsigned long elapsed_since_sync = 0;
+  if (total_uptime > last_ntp_sync) {
+    elapsed_since_sync = total_uptime - last_ntp_sync;
+  }
+
+  time_t t = PoolMonitor::currentTZ.toLocal(last_epoch + elapsed_since_sync);
+  char buf[10];
+  snprintf(buf, sizeof(buf), "%.2d:%.2d", hour(t), minute(t));
+  lastUpdate_ = String(buf);
+  preferences_->putString("last_update", lastUpdate_);
+}
+
 void PoolMonitorContext::showSetupScreen() {
   Serial.println("⚙️\tConfiguration portal active");
 
@@ -388,6 +395,8 @@ auto PoolMonitorContext::initializeNetwork() -> void {
 
   WiFiSettings.onConfigSaved = []() {
     Serial.println("💾\tConfiguration saved - restarting");
+    // Ensure first wake after restart does a network cycle immediately
+    preferences_->putUInt("no_wifi_count", SKIP_WIFI_WAKE_CYCLES);
     preferences_->end();
     ESP.restart();
   };
