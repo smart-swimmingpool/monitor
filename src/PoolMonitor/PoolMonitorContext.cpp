@@ -184,8 +184,6 @@ auto PoolMonitorContext::setup() -> void {
   } else {
     // No-network cycle: E-Ink retains image, skip all display operations
     // Only reconstruct time and load cached state for bookkeeping
-    // Clear boot counter: reaching here means normal execution is stable
-    SystemMonitor::clearBootLoopCounter();
     loadState();
     reconstructTime(total_uptime);
 
