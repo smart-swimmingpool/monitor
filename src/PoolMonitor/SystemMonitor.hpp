@@ -32,6 +32,7 @@ private:
   static uint32_t lastMemoryCheck;
   static uint32_t minFreeHeap;
   static bool lowMemoryWarning;
+  static Preferences* prefs_;
 
 public:
   /**
@@ -59,6 +60,9 @@ public:
 #endif
     esp_task_wdt_add(NULL);
   }
+
+  /** @brief Set Preferences handle for safe shutdown before restart. */
+  static void setPreferences(Preferences* p) { prefs_ = p; }
 
   /**
    * @brief Feed the watchdog — call this regularly in main loop.
@@ -89,11 +93,14 @@ public:
       minFreeHeap = freeHeap;
     }
 
-    // Critical memory — reboot immediately
+    // Critical memory — reboot immediately, but close NVS first
     if (freeHeap < CRITICAL_MEMORY_THRESHOLD) {
       Serial.printf("CRITICAL: Free heap %d bytes < %d bytes. Rebooting...\n",
                     freeHeap, CRITICAL_MEMORY_THRESHOLD);
       Serial.flush();
+      if (prefs_) {
+        prefs_->end();
+      }
       delay(1000);
       ESP.restart();
     }
@@ -115,10 +122,13 @@ public:
   /** @brief Get minimum free heap since boot. */
   static uint32_t getMinFreeHeap() { return minFreeHeap; }
 
-  /** @brief Force a reboot. */
+  /** @brief Force a reboot with NVS cleanup. */
   static void reboot() {
     Serial.println("System reboot requested");
     Serial.flush();
+    if (prefs_) {
+      prefs_->end();
+    }
     delay(1000);
     ESP.restart();
   }
