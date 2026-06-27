@@ -147,7 +147,7 @@ void DisplayManager::updateDisplay(float poolTemp, float solarTemp, bool poolPum
     display_.fillRect(95, 94 - 5, 8, 8, GxEPD_WHITE);
   }
 
-  display_.updateWindow(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH - 1, UPDATE_AREA_HEIGHT - 1, true);
+  display_.updateWindow(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH, UPDATE_AREA_HEIGHT, true);
 }
 
 void DisplayManager::powerDown() {
