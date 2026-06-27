@@ -13,5 +13,6 @@ namespace PoolMonitor {
 uint32_t SystemMonitor::lastMemoryCheck = 0;
 uint32_t SystemMonitor::minFreeHeap = 0;
 bool SystemMonitor::lowMemoryWarning = false;
+Preferences* SystemMonitor::prefs_ = nullptr;
 
 }  // namespace PoolMonitor

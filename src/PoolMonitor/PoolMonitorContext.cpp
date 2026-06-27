@@ -88,6 +88,9 @@ auto PoolMonitorContext::setup() -> void {
     }
   }
 
+  // Register with SystemMonitor for safe NVS shutdown before restart
+  SystemMonitor::setPreferences(preferences_);
+
   // Initialize OTA updater
   OtaUpdater::begin(*preferences_);
 
