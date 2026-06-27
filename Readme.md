@@ -7,74 +7,68 @@
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/J3J33A8DT)
 
-The _Pool Monitor_ is a small additional device to show current pool data using e-ink displays:
+The _Pool Monitor_ is a compact E-Ink display device that shows current pool
+data by subscribing to Home Assistant MQTT topics from the
+[Pool Controller](https://github.com/smart-swimmingpool/pool-controller):
 
-* Temperature of the pool water
-* Temperature of solar storage
+* Pool water temperature
+* Solar storage temperature
 * Pool pump status (on/off)
 * Solar heating status (on/off)
 
+All data is read-only — the monitor displays what the pool controller publishes.
+No sensors, relays, or wiring required. Just power via USB-C and configure
+WiFi + MQTT through the captive portal.
+
 ## Features
 
-* [x] Configurable MQTT server
-* [x] Automatically connect to MQTT messages of pool controller
-* [x] Open hotspot (captive portal) to configure WiFi and MQTT server
-* [x] [Home Assistant](https://www.home-assistant.io/) MQTT Discovery compatible (reads pool-controller state topics)
-* [x] Time sync via NTP (europe.pool.ntp.org)
-* [x] Deep sleep operation for battery-powered use
+* [x] WiFi configuration via captive portal (ESP-WiFiSettings)
+* [x] MQTT connection to existing pool controller
+* [x] Reads Home Assistant MQTT state topics
+* [x] NTP time synchronisation with automatic CET/CEST
+* [x] Deep-sleep operation (180 s cycle, ~5.5 mA average)
+* [x] Solar-powered operation (documented in [Hardware Guide](docs/hardware-guide.md))
 * [x] OTA firmware updates via GitHub Releases
 * [x] System monitoring with watchdog and memory checks
 * [x] Boot-loop detection for reliable operation
+* [x] Configuration portal with QR code on MQTT errors
 
 ## Planned Features
 
-* [ ] Solar powering using solar panel
-* [ ] Nice case to place outdoor at pool
-* [ ] Support of different displays
-* [ ] Ability to switch on/off solar heating
-* [ ] Ability to switch on/off pool pump
-* [ ] Ability to change controller mode (auto, manual, ...)
-* [ ] Ability to configure pool controller
+* [ ] Support for additional display sizes
+* [ ] Ability to switch solar heating on/off (requires interactive mode)
+* [ ] Ability to switch pool pump on/off (requires interactive mode)
+* [ ] Web dashboard (served from ESP32 during configuration mode)
 
 ## Guides
 
-* [Users Guide](docs/users-guide.md)
-* [Hardware Guide](docs/hardware-guide.md)
-* [Software Guide](docs/software-guide.md)
-* [Home Assistant Migration Notes](docs/home-assistant-migration.md)
+* [Users Guide](docs/users-guide.md) — Setup, configuration, display layout
+* [Hardware Guide](docs/hardware-guide.md) — Board variants, pinout, solar powering
+* [Software Guide](docs/software-guide.md) — Development, build, MQTT topics
 
 ## Architecture
 
-The Pool Monitor follows the same architectural patterns as the Pool Controller for consistency and maintainability:
+The firmware follows the same patterns as the Pool Controller for consistency:
 
-### Namespace Structure
+- **PoolMonitorContext** — main singleton that owns all subsystems
+- **SystemMonitor** — watchdog, memory monitoring, boot-loop detection
+- **NetworkManager** — WiFi and MQTT connection management
+- **DisplayManager** — E-Ink display control
+- **OtaUpdater** — OTA firmware update checker and installer
+- **TimeClientHelper** — NTP time sync and timezone support
 
-All code is organized under the `PoolMonitor` namespace, matching the `PoolController` namespace pattern.
-
-### Class Structure
-
-- **PoolMonitorContext**: Main singleton context that owns all subsystems
-- **SystemMonitor**: Watchdog, memory monitoring, and boot-loop detection
-- **NetworkManager**: WiFi and MQTT connection management
-- **DisplayManager**: E-Ink display management
-- **OtaUpdater**: OTA firmware update checker and installer
-- **TimeClientHelper**: NTP time client and timezone support
-
-### Key Design Principles
-
-1. **RAII**: Resources are managed through constructors/destructors
-2. **Singleton Pattern**: Subsystems are accessed through static methods
-3. **Dependency Injection**: Preferences and other dependencies are passed during initialization
-4. **Error Handling**: Graceful degradation with clear error messages
-5. **Memory Safety**: Stack-allocated buffers instead of heap allocation where possible
+Key design principles: RAII resource management, static method access for
+subsystems, dependency injection via `Preferences` handles, stack-allocated
+buffers for memory safety, and graceful degradation on errors.
 
 ## Quality Checks
 
-Run the local quality gates before pushing changes so lint findings are fixed before CI:
+Run the local quality gates before pushing changes:
 
-* Install Python-based linters once with `python3 -m pip install --user cpplint yamllint`
+* Install Python-based linters once: `python3 -m pip install --user cpplint yamllint`
 * `markdownlint-cli2` and `jscpd` are executed on demand via `npx`
-* Stage your changes first, then run the following Bash-only snippet (`mapfile`, arrays and `git diff --cached` require Bash)
+* `make lint` runs Super-Linter via Docker (see [CONTRIBUTING.md](CONTRIBUTING.md))
+* Stage your changes first, then run:
 
 ```bash
 platformio check --environment LILYGO_T5_V231 --skip-packages
@@ -91,8 +85,8 @@ python -m json.tool .jscpd.json > /dev/null
 
 ## Discussions
 
-see: <https://github.com/smart-swimmingpool/smart-swimmingpool.github.io/discussions>
+See [GitHub Discussions](https://github.com/smart-swimmingpool/smart-swimmingpool.github.io/discussions).
 
 ## License
 
-[LICENSE](LICENSE)
+[MIT](LICENSE)

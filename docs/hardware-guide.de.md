@@ -186,15 +186,10 @@ ohne USB‑Netzteil betrieben werden.
 
 ### Leistungsbudget
 
-| Zustand | Strom | Dauer pro Zyklus |
-| --- | --- | --- |
-| Aktiv (WiFi + MQTT + Display‑Update) | ~80 mA | ~10–15 Sekunden |
-| Deep Sleep | ~10 µA | ~165–170 Sekunden |
-| **Durchschnitt** | **~5,5 mA** | über 180‑s‑Zyklus |
-| **Täglicher Energiebedarf** | **~132 mAh** | bei 5 V (≙ 660 mWh) |
-
-Der tägliche Energiebedarf von **~130 mAh** (bei 5 V) ist selbst mit einer
-kleinen Solarzelle an den meisten Standorten deckbar.
+Siehe die [Stromverbrauch](#stromverbrauch)-Tabelle im Basisabschnitt oben
+für die Stromaufnahme in Aktiv- und Schlafzustand. Der tägliche
+Energiebedarf von **~130 mAh** (bei 5 V) ist selbst mit einer kleinen
+Solarzelle an den meisten Standorten deckbar.
 
 ---
 

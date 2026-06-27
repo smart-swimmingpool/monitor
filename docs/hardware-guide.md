@@ -188,15 +188,10 @@ USB power supply.
 
 ### Power Budget
 
-| State | Current | Duration per cycle |
-| --- | --- | --- |
-| Active (WiFi + MQTT + display update) | ~80 mA | ~10–15 seconds |
-| Deep sleep | ~10 µA | ~165–170 seconds |
-| **Average** | **~5.5 mA** | over 180 s cycle |
-| **Daily energy requirement** | **~132 mAh** | at 5 V (≙ 660 mWh) |
-
-The daily energy requirement of **~130 mAh** (at 5 V) can be met by even a
-small solar panel at most locations.
+See the [Power Consumption](#power-consumption) table in the base section
+above for the active/sleep current draw. The daily energy requirement of
+**~130 mAh** (at 5 V) can be met by even a small solar panel at most
+locations.
 
 ---
 

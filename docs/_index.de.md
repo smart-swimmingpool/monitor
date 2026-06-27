@@ -1,11 +1,11 @@
 ---
 linktitle: Pool Monitor
-summary:Überwache die Temperatur deines Swimmingpools
+summary: Überwache die Temperatur deines Swimmingpools
 
 # page metadata.
 title: Pool Monitor
 date: "2020-05-28"
-lastmod: "2022-06-11"
+lastmod: "2026-06-27"
 draft: false
 toc: true
 type: docs
@@ -25,7 +25,7 @@ menu:
 <a class="github-button" href="https://github.com/smart-swimmingpool/monitor" data-icon="octicon-star" data-size="large" data-show-count="true" aria-label="Star this on GitHub">Star</a><script async defer src="https://buttons.github.io/buttons.js"></script>
 </span>
 
-[Monitoring Gadget](https://github.com/smart-swimmingpool/monitor) to show current temperature of the swimming pool.
+Der [Pool Monitor](https://github.com/smart-swimmingpool/monitor) ist ein dediziertes E-Ink-Anzeigegerät, das aktuelle Pool-Daten anzeigt — Temperatur, Pumpen-Status und Solar-Status — durch Abonnement der Home-Assistant-MQTT-Topics des [Pool Controllers](https://github.com/smart-swimmingpool/pool-controller).
 
 {{< figure library="true" src="pool-monitor-prototype.jpg" title="Prototype of Pool Monitor" lightbox="true" >}}
 

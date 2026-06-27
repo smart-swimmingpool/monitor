@@ -57,34 +57,47 @@ pio check --environment LILYGO_T5_V231 --skip-packages
 
 ```text
 monitor/
-├── platformio.ini          # Build configuration
+├── platformio.ini           # Build configuration
+├── Makefile                 # Local dev tasks (lint, build, format)
+├── CPPLINT.cfg              # C++ linting config
 ├── src/
-│   ├── main.cpp            # Main firmware (setup, loop, MQTT, display)
-│   ├── board_def.h         # Board-specific pin definitions
-│   ├── u8g2_display.h      # E-Ink display helpers (text, icons)
-│   └── ntp_localtime.h     # NTP time sync & timezone handling
-└── docs/
-    ├── hardware-guide.md   # Hardware assembly guide
-    ├── software-guide.md   # This document
-    ├── users-guide.md      # Setup & configuration
-    └── home-assistant-migration.md  # HA migration notes
+│   ├── main.cpp             # Arduino entry point (setup, loop)
+│   └── PoolMonitor/         # Subsystem classes (namespace PoolMonitor)
+│       ├── Config.hpp       # Pin definitions & compile-time constants
+│       ├── PoolMonitorContext.{hpp,cpp}     # Core context — owns all subsystems
+│       ├── DisplayManager.{hpp,cpp}         # E-Ink display management
+│       ├── NetworkManager.{hpp,cpp}         # WiFi & MQTT connection
+│       ├── OtaUpdater.{hpp,cpp}             # OTA firmware updates
+│       ├── SystemMonitor.{hpp,cpp}          # Watchdog, memory, boot-loop detection
+│       └── TimeClientHelper.{hpp,cpp}       # NTP time sync & timezone
+├── lib/                     # External libraries (managed by PlatformIO)
+├── docs/
+│   ├── hardware-guide.md    # Hardware assembly guide
+│   ├── software-guide.md    # This document
+│   └── users-guide.md       # Setup & configuration
+├── .github/workflows/       # GitHub Actions CI
+└── platformio.ini           # Build configuration
 ```
 
 ---
 
 ## Required Libraries
 
-- adafruit/Adafruit BusIO
-- adafruit/Adafruit GFX Library
-- zinggjm/GxEPD
-- juerd/ESP-WiFiSettings
-- olikraus/U8g2
-- olikraus/U8g2_for_Adafruit_GFX
-- hmueller01/PubSubClient3
-- arduino-libraries/NTPClient
-- jchristensen/Timezone
+Libraries are declared in [`platformio.ini`](https://github.com/smart-swimmingpool/monitor/blob/main/platformio.ini)
+with version pins and resolved automatically by PlatformIO:
 
-Many thanks to maintainers of these libraries!
+- `zinggjm/GxEPD` — E-Ink display driver
+- `juerd/ESP-WiFiSettings` — Captive portal for WiFi/MQTT config
+- `olikraus/U8g2` — Icon fonts for display
+- `olikraus/U8g2_for_Adafruit_GFX` — U8g2 integration with Adafruit GFX
+- `knolleary/PubSubClient` — MQTT client
+- `arduino-libraries/NTPClient` — NTP time synchronisation
+- `jchristensen/Timezone` — Timezone & DST handling
+- `adafruit/Adafruit BusIO` — SPI/I2C abstraction
+- `adafruit/Adafruit GFX Library` — Graphics primitives
+- `bblanchon/ArduinoJson` — JSON parsing for OTA update metadata
+
+Many thanks to the maintainers of these libraries!
 
 ---
 
@@ -101,7 +114,7 @@ The build configuration is defined in `platformio.ini`.
 
 ### Run-Time Constants
 
-Defined in `src/main.cpp`:
+Defined in `src/PoolMonitor/Config.hpp`:
 
 | Constant | Default | Description |
 |----------|---------|-------------|
@@ -116,19 +129,10 @@ Defined in `src/main.cpp`:
 
 ### WiFi & MQTT Setup
 
-The firmware uses the **ESP-WiFiSettings** library to provide a captive portal
-for initial configuration:
-
-1. On first boot (no WiFi configured), the device starts an **access point**
-   named `pool-monitor`.
-2. Connect to this AP and a web portal opens at `http://192.168.4.1`.
-3. Enter:
-   - **WiFi SSID** and **password**
-   - **MQTT broker hostname** or IP address
-   - **MQTT port** (default: 1883)
-4. Click **Save** — the device reboots and connects.
-
-See the [Users Guide](users-guide.md) for detailed setup instructions.
+The firmware uses the **ESP-WiFiSettings** library for the captive portal
+configuration. For the **end-user setup process** (connecting to the AP,
+entering credentials, QR code portal on error), see the
+[Users Guide](users-guide.md).
 
 ### MQTT Topics
 
@@ -148,6 +152,11 @@ These are fixed topics — no dynamic discovery is used.
 > data itself.
 
 ### Preferences (NVS)
+
+> ⚠️ This section is **outdated** — the NVS layout has been refactored into the
+> `PoolMonitor` subsystem. See
+> [`PoolMonitorContext.cpp`](https://github.com/smart-swimmingpool/monitor/blob/main/src/PoolMonitor/PoolMonitorContext.cpp)
+> for the current implementation.
 
 The firmware stores runtime state in ESP32 NVS (Non-Volatile Storage) using
 the Arduino `Preferences` library under the `pool-monitor` namespace:
@@ -172,27 +181,5 @@ the Arduino `Preferences` library under the `pool-monitor` namespace:
 - Between syncs, the current time is **reconstructed** from the stored epoch and
   elapsed uptime.
 - The display shows **local time** with automatic daylight saving time
-  handling (CET/CEST, configured in `src/ntp_localtime.h`).
+  handling (CET/CEST, configured in `src/PoolMonitor/TimeClientHelper.hpp`).
 - The E-Ink display updates **only when data changes** (received via MQTT).
-
----
-
-## Changelog
-
-### 2026-06-10 — DNS failover, mDNS, QR code portal, and 5-minute timeout
-
-- **DNS failover:** MQTT connection is always attempted even when the hostname
-  cannot be resolved via DNS. PubSubClient resolves DNS internally.
-- **mDNS:** Device registers as `pool-monitor.local` on the local network.
-- **WiFi disconnect removed:** Explicit `WiFi.disconnect(true)` before deep
-  sleep was removed so the DHCP lease is preserved. The device stays visible in
-  the router table.
-- **MQTT portal with QR code:** On MQTT failure, a configuration portal starts.
-  The display shows SSID, AP IP, and a QR code.
-- **5-minute timeout:** The portal stays active for a maximum of 5 minutes.
-  Without user interaction, the device enters deep sleep and retries the
-  connection on the next wake cycle.
-- **upload_speed:** Reduced to 115200 baud for compatibility with older ESP32
-  rev1.0 hardware.
-- **QR code library:** Uses ESP32 built-in `esp_qrcode` — no additional
-  dependency required.
