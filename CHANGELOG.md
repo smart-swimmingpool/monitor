@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-06-27
+
+### Fixed
+
+- Display ghosting: corrected updateWindow() dimensions (was 1px too small)
+- Float printf: added `_printf_float` linker flag for ESP32 temperature display
+- NVS data loss: preferences.end() now called before ESP.restart() in SystemMonitor
+- OTA security: GitHub API call uses setCACert() instead of setInsecure()
+- MQTT polling: replaced fixed-iteration loop with millis()-based timeout (max 500ms)
+- Night-mode: use int32_t for secondsUntilEnd to prevent integer underflow
+
+### Changed
+
+- Documented GPIO23 sharing between SPI MOSI and modem power control
+
 ## [3.0.0] - 2026-06-26
 
 ### Added
@@ -50,6 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - NTP time synchronization
 - OTA update functionality
 
-[Unreleased]: https://github.com/smart-swimmingpool/monitor/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/smart-swimmingpool/monitor/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/smart-swimmingpool/monitor/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/smart-swimmingpool/monitor/compare/v0.1.0...v3.0.0
 [0.1.0]: https://github.com/smart-swimmingpool/monitor/releases/tag/v0.1.0
