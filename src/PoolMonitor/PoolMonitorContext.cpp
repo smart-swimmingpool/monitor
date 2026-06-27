@@ -246,7 +246,7 @@ auto PoolMonitorContext::prepareForSleep() -> void {
       sleepSeconds = NIGHT_SLEEP_INTERVAL_SECONDS;
 
       // Clamp night sleep so the device does not overshoot NIGHT_END_HOUR
-      int secondsUntilEnd;
+      int32_t secondsUntilEnd;
       if (currentHour >= static_cast<int>(NIGHT_START_HOUR)) {
         // Night started today (22:xx-23:xx), end is tomorrow 06:xx
         secondsUntilEnd = (static_cast<int>(NIGHT_END_HOUR) + 24 - currentHour) * 3600
