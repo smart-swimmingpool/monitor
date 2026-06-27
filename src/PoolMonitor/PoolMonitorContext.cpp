@@ -529,8 +529,11 @@ auto PoolMonitorContext::initializeMqtt() -> void {
                 static_cast<unsigned int>(successfulSubscriptions),
                 static_cast<unsigned int>(sizeof(subscriptions) / sizeof(subscriptions[0])));
 
-  // Process retained messages (reduced from original 200 to save power)
-  for (int i = 0; i < 100; i++) {
+  // Process retained messages with a non-blocking timeout
+  // Messages typically arrive within 100-300ms; the timeout ensures we
+  // don't wait longer than necessary when messages are fast.
+  unsigned long mqttStart = millis();
+  while (millis() - mqttStart < 500) {
     NetworkManager::loop();
     delay(10);
   }
