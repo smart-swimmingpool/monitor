@@ -149,6 +149,13 @@ public:
     Preferences prefs;
     prefs.begin("sysmon", false);
 
+    // Deep-sleep wakes are normal scheduled events, not potential crash
+    // reboot cycles — do not count them toward boot-loop detection.
+    if (esp_reset_reason() == ESP_RST_DEEPSLEEP) {
+      prefs.end();
+      return false;
+    }
+
     int bootCount = prefs.getInt("bootCount", 0) + 1;
 
     Serial.printf("  Boot counter: %d\n", bootCount);
