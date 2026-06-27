@@ -236,7 +236,7 @@ bool OtaUpdater::fetchLatestRelease() {
 #endif
 
   WiFiClientSecure client;
-  client.setInsecure();  // Accept any cert (sufficient for IoT device)
+  client.setCACert(kGitHubRootCA);
   client.setTimeout(10000);
 
   // Build API URL
