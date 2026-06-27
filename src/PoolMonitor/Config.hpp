@@ -84,7 +84,13 @@ constexpr std::int8_t PIN_SPI_MISO{-1};
 /** @brief SPI CLK pin for display. */
 constexpr std::uint8_t PIN_SPI_CLK{18};
 
-/** @brief Modem power control pin. */
+/**
+ * @brief Modem power control pin.
+ * @note Shares GPIO23 with PIN_SPI_MOSI. When pulled LOW in
+ *       prepareForSleep() to power down the modem, the SPI bus is
+ *       temporarily affected. DisplayManager::begin() reinitializes
+ *       SPI on the next wake cycle, so this is safe.
+ */
 constexpr std::uint8_t PIN_MODEM_POWER_ON{23};
 
 /** @brief Built-in LED pin. */
