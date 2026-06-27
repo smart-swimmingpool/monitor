@@ -98,7 +98,9 @@ public:
       Serial.printf("CRITICAL: Free heap %d bytes < %d bytes. Rebooting...\n",
                     freeHeap, CRITICAL_MEMORY_THRESHOLD);
       Serial.flush();
-      if (prefs_) { prefs_->end(); }
+      if (prefs_) {
+        prefs_->end();
+      }
       delay(1000);
       ESP.restart();
     }
@@ -124,7 +126,9 @@ public:
   static void reboot() {
     Serial.println("System reboot requested");
     Serial.flush();
-    if (prefs_) { prefs_->end(); }
+    if (prefs_) {
+      prefs_->end();
+    }
     delay(1000);
     ESP.restart();
   }
