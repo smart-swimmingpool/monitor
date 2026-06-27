@@ -113,15 +113,23 @@ auto PoolMonitorContext::setup() -> void {
   bool hasConfig = (preferences_->getString("mqtt_server", "").length() > 0);
   bool doNetwork = !hasConfig || (cyclesWithoutWiFi >= SKIP_WIFI_WAKE_CYCLES);
 
+  // Scale no_wifi_count increment by actual sleep duration so a 4-hour
+  // night sleep advances the counter by ~80 cycles (14400/180) instead
+  // of only 1, preventing network-skip on the post-night wake.
+  uint32_t skipIncrement = lastSleepDuration / TIME_TO_SLEEP_SECONDS;
+  if (skipIncrement < 1) skipIncrement = 1;
+
   if (doNetwork) {
     preferences_->putUInt("no_wifi_count", 0);
   } else {
-    preferences_->putUInt("no_wifi_count", cyclesWithoutWiFi + 1);
+    preferences_->putUInt("no_wifi_count", cyclesWithoutWiFi + skipIncrement);
   }
-  Serial.printf("📡\tNetwork cycle: %s (%u/%u without WiFi)\n",
+  Serial.printf("📡\tNetwork cycle: %s (%u/%u without WiFi, last sleep: %u s, inc: %u)\n",
                 doNetwork ? "YES" : "NO",
                 doNetwork ? 0 : cyclesWithoutWiFi + 1,
-                SKIP_WIFI_WAKE_CYCLES);
+                SKIP_WIFI_WAKE_CYCLES,
+                lastSleepDuration,
+                skipIncrement);
 
   // Initialize NTP time client
   PoolMonitor::beginTimeClient();
