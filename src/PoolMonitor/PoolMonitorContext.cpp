@@ -67,6 +67,7 @@ PoolMonitorContext::~PoolMonitorContext() {
   Self = nullptr;
 }
 
+// cppcheck-suppress unusedFunction ; called from main.cpp (cross-TU)
 auto PoolMonitorContext::setup() -> void {
   Serial.println(F(" ------------------------------------- "));
   Serial.println(F("| Pool Monitor                        |"));
