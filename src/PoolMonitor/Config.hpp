@@ -46,6 +46,17 @@ constexpr std::uint32_t SKIP_WIFI_WAKE_CYCLES{5};
 constexpr std::uint32_t NTP_SYNC_INTERVAL_SECONDS{3600};
 
 /**
+ * @brief Night mode — reduces wake frequency when nobody watches the display.
+ *
+ * Between NIGHT_START_HOUR and NIGHT_END_HOUR (local time) the device
+ * wakes only every NIGHT_SLEEP_INTERVAL_SECONDS instead of the normal
+ * TIME_TO_SLEEP_SECONDS. Saves significant power during the night.
+ */
+constexpr std::uint32_t NIGHT_START_HOUR{22};
+constexpr std::uint32_t NIGHT_END_HOUR{6};
+constexpr std::uint32_t NIGHT_SLEEP_INTERVAL_SECONDS{14400};  // 4 hours
+
+/**
  * @brief MQTT payload buffer size for callback handling.
  */
 constexpr size_t MQTT_PAYLOAD_BUFFER_SIZE{128};

@@ -86,12 +86,6 @@ class DisplayManager {
   /** @brief Update full display (not just partial). */
   static void fullUpdate();
 
-  /** @brief Get display width. */
-  static uint16_t getWidth();
-
-  /** @brief Get display height. */
-  static uint16_t getHeight();
-
   /** @brief Get reference to the display instance. */
   static auto getDisplay() -> GxEPD_Class&;
 

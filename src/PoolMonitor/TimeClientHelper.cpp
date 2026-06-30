@@ -23,10 +23,12 @@ WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "europe.pool.ntp.org");
 Timezone currentTZ = CE;
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 void beginTimeClient() {
   timeClient.begin();
 }
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 String getCurrentTime() {
   // update time with timeout to prevent infinite loop
   int retries = 0;
