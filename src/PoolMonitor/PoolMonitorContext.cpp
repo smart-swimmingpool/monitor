@@ -26,14 +26,9 @@
 
 namespace PoolMonitor {
 
-// Static member definitions
 String PoolMonitorContext::mqtt_server;
 uint16_t PoolMonitorContext::mqtt_server_port = 1883;
 
-// Static context instance
-static PoolMonitorContext *Self = nullptr;
-
-// State variables
 static float poolTemp_ = 0.0f;
 static float solarTemp_ = 0.0f;
 static bool poolPumpOn_ = false;
@@ -41,24 +36,19 @@ static bool solarPumpOn_ = false;
 static String poolMode_ = "unknown";
 static String lastUpdate_ = "??:??";
 
-// Preferences for state persistence
 static Preferences *preferences_ = nullptr;
 
-// Home Assistant MQTT state topics for pool-controller (fixed, no discovery needed)
-
-// Home Assistant MQTT state topics for pool-controller (fixed, no discovery needed)
-const char* HA_TOPIC_POOL_TEMP = "homeassistant/sensor/pool-controller/pool-temp/state";
-const char* HA_TOPIC_SOLAR_TEMP = "homeassistant/sensor/pool-controller/solar-temp/state";
-const char* HA_TOPIC_POOL_PUMP = "homeassistant/switch/pool-controller/pool-pump/state";
-const char* HA_TOPIC_SOLAR_PUMP = "homeassistant/switch/pool-controller/solar-pump/state";
-const char* HA_TOPIC_MODE = "homeassistant/select/pool-controller/mode/state";
+// Home Assistant MQTT state topics (pool-controller publishes to these fixed topics)
+static constexpr const char* kHaTopicPoolTemp  = "homeassistant/sensor/pool-controller/pool-temp/state";
+static constexpr const char* kHaTopicSolarTemp = "homeassistant/sensor/pool-controller/solar-temp/state";
+static constexpr const char* kHaTopicPoolPump  = "homeassistant/switch/pool-controller/pool-pump/state";
+static constexpr const char* kHaTopicSolarPump = "homeassistant/switch/pool-controller/solar-pump/state";
+static constexpr const char* kHaTopicMode      = "homeassistant/select/pool-controller/mode/state";
 
 // Forward declaration
 static void reconstructTime(unsigned long total_uptime);
 
-PoolMonitorContext::PoolMonitorContext() {
-  Self = this;
-}
+PoolMonitorContext::PoolMonitorContext() = default;
 
 PoolMonitorContext::~PoolMonitorContext() {
   if (preferences_) {
@@ -66,7 +56,6 @@ PoolMonitorContext::~PoolMonitorContext() {
     delete preferences_;
     preferences_ = nullptr;
   }
-  Self = nullptr;
 }
 
 auto PoolMonitorContext::setup() -> void {
@@ -514,11 +503,11 @@ auto PoolMonitorContext::initializeMqtt() -> void {
 
   // Subscribe to topics
   const char* subscriptions[] = {
-    HA_TOPIC_POOL_TEMP,
-    HA_TOPIC_SOLAR_TEMP,
-    HA_TOPIC_POOL_PUMP,
-    HA_TOPIC_SOLAR_PUMP,
-    HA_TOPIC_MODE
+    kHaTopicPoolTemp,
+    kHaTopicSolarTemp,
+    kHaTopicPoolPump,
+    kHaTopicSolarPump,
+    kHaTopicMode
   };
 
   size_t successfulSubscriptions = 0;
@@ -620,27 +609,27 @@ void PoolMonitorContext::handleMqttMessage(char* topic, byte* payload, unsigned 
   String payloadString = String(payloadCopy);
 
   // Match Home Assistant state topics directly
-  if (strcmp(topic, HA_TOPIC_POOL_TEMP) == 0) {
+  if (strcmp(topic, kHaTopicPoolTemp) == 0) {
     Serial.println("\tPool temperature: " + payloadString);
     poolTemp_ = payloadString.toFloat();
     preferences_->putFloat("pool_temp", poolTemp_);
 
-  } else if (strcmp(topic, HA_TOPIC_SOLAR_TEMP) == 0) {
+  } else if (strcmp(topic, kHaTopicSolarTemp) == 0) {
     Serial.println("\tSolar temperature: " + payloadString);
     solarTemp_ = payloadString.toFloat();
     preferences_->putFloat("solar_temp", solarTemp_);
 
-  } else if (strcmp(topic, HA_TOPIC_POOL_PUMP) == 0) {
+  } else if (strcmp(topic, kHaTopicPoolPump) == 0) {
     Serial.println("\tPool pump: " + payloadString);
     poolPumpOn_ = parseHomeAssistantBoolState(payloadCopy);
     preferences_->putBool("pump_pool", poolPumpOn_);
 
-  } else if (strcmp(topic, HA_TOPIC_SOLAR_PUMP) == 0) {
+  } else if (strcmp(topic, kHaTopicSolarPump) == 0) {
     Serial.println("\tSolar pump: " + payloadString);
     solarPumpOn_ = parseHomeAssistantBoolState(payloadCopy);
     preferences_->putBool("pump_solar", solarPumpOn_);
 
-  } else if (strcmp(topic, HA_TOPIC_MODE) == 0) {
+  } else if (strcmp(topic, kHaTopicMode) == 0) {
     Serial.println("\tOperation Mode: " + payloadString);
     poolMode_ = payloadString;
     preferences_->putString("pool_mode", poolMode_);

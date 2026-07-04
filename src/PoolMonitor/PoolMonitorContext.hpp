@@ -27,13 +27,9 @@ namespace PoolMonitor {
  */
 struct PoolMonitorContext final {
   PoolMonitorContext();
-  // no copy
   PoolMonitorContext(const PoolMonitorContext &) = delete;
-  // no move
   PoolMonitorContext(PoolMonitorContext &&) = delete;
-  // no copy
   auto operator=(const PoolMonitorContext &) -> PoolMonitorContext & = delete;
-  // no move
   auto operator=(PoolMonitorContext &&) -> PoolMonitorContext & = delete;
   ~PoolMonitorContext();
 
@@ -72,7 +68,7 @@ struct PoolMonitorContext final {
    * @brief Check if NTP time sync is needed based on last sync timestamp.
    * @return true if sync is needed, false otherwise.
    */
-  static bool isNtpSyncNeeded();
+  static auto isNtpSyncNeeded() -> bool;
 
 private:
   /**
@@ -88,17 +84,17 @@ private:
   /**
    * @brief Show setup screen with QR code for WiFi configuration.
    */
-  static void showSetupScreen();
+  static auto showSetupScreen() -> void;
 
   /**
    * @brief Show screen when WiFi connection is successful.
    */
-  static void showWiFiConnectedScreen();
+  static auto showWiFiConnectedScreen() -> void;
 
   /**
    * @brief Show screen when WiFi connection fails.
    */
-  static void showWiFiConnectionFailedScreen();
+  static auto showWiFiConnectionFailedScreen() -> void;
 
   /**
    * @brief Initialize MQTT subscriptions.
@@ -118,7 +114,7 @@ private:
   /**
    * @brief Handle incoming MQTT messages.
    */
-  static void handleMqttMessage(char* topic, byte* payload, unsigned int length);
+  static auto handleMqttMessage(char* topic, byte* payload, unsigned int length) -> void;
 
   bool bootLoopDetected_ = false;
   bool stateLoaded_ = false;

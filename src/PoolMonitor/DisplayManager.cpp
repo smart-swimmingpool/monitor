@@ -120,36 +120,37 @@ void DisplayManager::updateDisplay(float poolTemp, float solarTemp, bool poolPum
   // Pool temperature
   snprintf(buffer, sizeof(buffer), "%2.1f C", poolTemp);
   displayText(buffer, 50, GxEPD_ALIGN_RIGHT);
-  display_.drawCircle(display_.width() - 35, 20, 5, GxEPD_BLACK);
-  display_.drawCircle(display_.width() - 35, 20, 4, GxEPD_BLACK);
-  display_.drawCircle(display_.width() - 35, 20, 3, GxEPD_BLACK);
+  drawDegreeSymbol(display_.width() - 35, 20);
 
   // Pool pump status icon
-  if (poolPumpOn) {
-    u8g2_for_adafruit_gfx_.setFont(u8g2_font_streamline_all_t);
-    u8g2_for_adafruit_gfx_.drawGlyph(95, 48, 0x01ec); /* run circle */
-  } else {
-    display_.fillRect(95, 48 - 5, 8, 8, GxEPD_WHITE);
-  }
+  drawPumpIcon(95, 48, poolPumpOn);
 
   // Solar temperature
   display_.setTextColor(GxEPD_BLACK);
   display_.setFont(&FreeSansBold24pt7b);
   snprintf(buffer, sizeof(buffer), "%2.1f C", solarTemp);
   displayText(buffer, 94, GxEPD_ALIGN_RIGHT);
-  display_.drawCircle(display_.width() - 35, 64, 5, GxEPD_BLACK);
-  display_.drawCircle(display_.width() - 35, 64, 4, GxEPD_BLACK);
-  display_.drawCircle(display_.width() - 35, 64, 3, GxEPD_BLACK);
+  drawDegreeSymbol(display_.width() - 35, 64);
 
   // Solar pump status icon
-  if (solarPumpOn) {
-    u8g2_for_adafruit_gfx_.setFont(u8g2_font_streamline_all_t);
-    u8g2_for_adafruit_gfx_.drawGlyph(95, 94, 0x01ec); /* run circle */
-  } else {
-    display_.fillRect(95, 94 - 5, 8, 8, GxEPD_WHITE);
-  }
+  drawPumpIcon(95, 94, solarPumpOn);
 
   display_.updateWindow(UPDATE_AREA_X, UPDATE_AREA_Y, UPDATE_AREA_WIDTH, UPDATE_AREA_HEIGHT, true);
+}
+
+void DisplayManager::drawDegreeSymbol(int16_t x, int16_t y) {
+  display_.drawCircle(x, y, 5, GxEPD_BLACK);
+  display_.drawCircle(x, y, 4, GxEPD_BLACK);
+  display_.drawCircle(x, y, 3, GxEPD_BLACK);
+}
+
+void DisplayManager::drawPumpIcon(int16_t x, int16_t y, bool isOn) {
+  if (isOn) {
+    u8g2_for_adafruit_gfx_.setFont(u8g2_font_streamline_all_t);
+    u8g2_for_adafruit_gfx_.drawGlyph(x, y, 0x01ec); /* run circle */
+  } else {
+    display_.fillRect(x, y - 5, 8, 8, GxEPD_WHITE);
+  }
 }
 
 void DisplayManager::powerDown() {

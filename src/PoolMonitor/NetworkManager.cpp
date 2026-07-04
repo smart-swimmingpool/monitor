@@ -9,7 +9,6 @@
 
 #include "NetworkManager.hpp"
 #include "Config.hpp"
-#include <ESPmDNS.h>
 
 namespace PoolMonitor {
 
@@ -17,44 +16,6 @@ namespace PoolMonitor {
 WiFiClient NetworkManager::wifiClient_;
 PubSubClient NetworkManager::mqttClient_(wifiClient_);
 NetworkManager::MqttMessageCallback NetworkManager::mqttCallback_ = nullptr;
-bool NetworkManager::apModeActive_ = false;
-bool NetworkManager::mdnsRunning_ = false;
-String NetworkManager::hostname_ = "";
-
-bool NetworkManager::begin(const char* hostname, uint32_t timeoutSeconds) {
-  hostname_ = hostname;
-
-  Serial.printf("Connecting to WiFi with hostname: %s\n", hostname);
-
-  // Try to connect to WiFi
-  WiFi.begin();
-
-  unsigned long startTime = millis();
-  while (WiFi.status() != WL_CONNECTED &&
-         (millis() - startTime) < (timeoutSeconds * 1000)) {
-    delay(100);
-    Serial.print(".");
-  }
-
-  if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("");
-    Serial.printf("WiFi connected. IP: %s\n", WiFi.localIP().toString().c_str());
-
-    // Start mDNS
-    if (MDNS.begin(hostname)) {
-      Serial.printf("mDNS responder started: %s.local\n", hostname);
-      mdnsRunning_ = true;
-    }
-
-    apModeActive_ = false;
-    return true;
-  }
-
-  Serial.println("");
-  Serial.println("WiFi connection failed");
-  apModeActive_ = true;
-  return false;
-}
 
 bool NetworkManager::beginMqtt(const char* server, uint16_t port, const char* clientId) {
   mqttClient_.setServer(server, port);

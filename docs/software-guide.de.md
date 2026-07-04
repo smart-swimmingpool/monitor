@@ -58,32 +58,45 @@ pio check --environment LILYGO_T5_V231 --skip-packages
 
 ```text
 monitor/
-├── platformio.ini          # Build-Konfiguration
+├── platformio.ini           # Build-Konfiguration
+├── Makefile                 # Lokale Dev-Tasks (lint, build, format)
+├── CPPLINT.cfg              # C++ Linting-Konfiguration
 ├── src/
-│   ├── main.cpp            # Hauptfirmware (setup, loop, MQTT, Display)
-│   ├── board_def.h         # Board-spezifische Pin-Definitionen
-│   ├── u8g2_display.h      # E-Ink Display-Hilfsfunktionen (Text, Icons)
-│   └── ntp_localtime.h     # NTP-Zeitsynchronisation & Zeitzone
-└── docs/
-    ├── hardware-guide.md   # Hardware-Anleitung
-    ├── software-guide.md   # Dieses Dokument
-    ├── users-guide.md      # Einrichtung & Konfiguration
-    └── home-assistant-migration.md  # HA-Migrationsnotizen
+│   ├── main.cpp             # Arduino-Entry-Point (setup, loop)
+│   └── PoolMonitor/         # Subsystem-Klassen (Namespace PoolMonitor)
+│       ├── Config.hpp       # Pin-Definitionen & Compile-Zeit-Konstanten
+│       ├── PoolMonitorContext.{hpp,cpp}     # Core-Kontext — besitzt alle Subsysteme
+│       ├── DisplayManager.{hpp,cpp}         # E-Ink Display-Verwaltung
+│       ├── NetworkManager.{hpp,cpp}         # WiFi & MQTT-Verbindung
+│       ├── OtaUpdater.{hpp,cpp}             # OTA-Firmware-Updates
+│       ├── SystemMonitor.{hpp,cpp}          # Watchdog, Speicher, Boot-Loop-Erkennung
+│       └── TimeClientHelper.{hpp,cpp}       # NTP-Zeitsync & Zeitzone
+├── lib/                     # Externe Bibliotheken (von PlatformIO verwaltet)
+├── docs/
+│   ├── hardware-guide.md    # Hardware-Anleitung
+│   ├── software-guide.md    # Dieses Dokument
+│   └── users-guide.md       # Einrichtung & Konfiguration
+├── .github/workflows/       # GitHub Actions CI
+└── platformio.ini           # Build-Konfiguration
 ```
 
 ---
 
 ## Benötigte Bibliotheken
 
-- adafruit/Adafruit BusIO
-- adafruit/Adafruit GFX Library
-- zinggjm/GxEPD
-- juerd/ESP-WiFiSettings
-- olikraus/U8g2
-- olikraus/U8g2_for_Adafruit_GFX
-- hmueller01/PubSubClient3
-- arduino-libraries/NTPClient
-- jchristensen/Timezone
+Die Bibliotheken werden in [`platformio.ini`](https://github.com/smart-swimmingpool/monitor/blob/main/platformio.ini)
+mit Versionsangaben deklariert und von PlatformIO automatisch aufgelöst:
+
+- `zinggjm/GxEPD` — E-Ink Display-Treiber
+- `juerd/ESP-WiFiSettings` — Captive Portal für WLAN/MQTT-Konfiguration
+- `olikraus/U8g2` — Icon-Schriftarten fürs Display
+- `olikraus/U8g2_for_Adafruit_GFX` — U8g2-Integration mit Adafruit GFX
+- `knolleary/PubSubClient` — MQTT-Client
+- `arduino-libraries/NTPClient` — NTP-Zeitsynchronisation
+- `jchristensen/Timezone` — Zeitzone & Sommerzeit
+- `adafruit/Adafruit BusIO` — SPI/I2C-Abstraktion
+- `adafruit/Adafruit GFX Library` — Grafik-Primitive
+- `bblanchon/ArduinoJson` — JSON-Parsing für OTA-Update-Metadaten
 
 Vielen Dank an die Maintainer dieser Bibliotheken!
 
@@ -102,7 +115,7 @@ Die Build-Konfiguration ist in `platformio.ini` definiert.
 
 ### Laufzeit-Konstanten
 
-Definiert in `src/main.cpp`:
+Definiert in `src/PoolMonitor/Config.hpp`:
 
 | Konstante | Standard | Beschreibung |
 |-----------|----------|-------------|
@@ -117,20 +130,10 @@ Definiert in `src/main.cpp`:
 
 ### WiFi & MQTT Einrichtung
 
-Die Firmware verwendet die Bibliothek **ESP-WiFiSettings** für ein Captive
-Portal zur Ersteinrichtung:
-
-1. Beim ersten Start (kein WiFi konfiguriert) startet das Gerät einen
-   **Access Point** namens `pool-monitor`.
-2. Mit diesem AP verbinden — ein Webportal öffnet sich unter
-   `http://192.168.4.1`.
-3. Eingabe:
-   - **WLAN-SSID** und **Passwort**
-   - **MQTT-Broker-Hostname** oder IP-Adresse
-   - **MQTT-Port** (Standard: 1883)
-4. **Save** klicken — das Gerät startet neu und verbindet sich.
-
-Siehe [Users Guide](users-guide.de.md) für detaillierte Anweisungen.
+Die Firmware verwendet die Bibliothek **ESP-WiFiSettings** für das Captive-
+Portal. Für den **Endbenutzer-Setup-Prozess** (Verbinden mit dem AP, Eingabe
+der Zugangsdaten, QR-Code-Portal bei Fehlern) siehe den
+[Users Guide](users-guide.de.md).
 
 ### MQTT Topics
 
@@ -151,6 +154,11 @@ Discovery.
 > Daten.
 
 ### Preferences (NVS)
+
+> ⚠️ Dieser Abschnitt ist **veraltet** — das NVS-Layout wurde in die
+> `PoolMonitor`-Subsysteme überführt. Siehe
+> [`PoolMonitorContext.cpp`](https://github.com/smart-swimmingpool/monitor/blob/main/src/PoolMonitor/PoolMonitorContext.cpp)
+> für die aktuelle Implementierung.
 
 Die Firmware speichert Betriebszustände im ESP32 NVS (Non-Volatile Storage)
 über die Arduino `Preferences`-Bibliothek im Namespace `pool-monitor`:
@@ -175,28 +183,5 @@ Die Firmware speichert Betriebszustände im ESP32 NVS (Non-Volatile Storage)
 - Zwischen den Synchronisationen wird die aktuelle Uhrzeit aus dem
   gespeicherten Epoch-Wert und der vergangenen Betriebszeit **rekonstruiert**.
 - Das Display zeigt die **Ortszeit** mit automatischer
-  Sommerzeitumstellung (CET/CEST, konfiguriert in `src/ntp_localtime.h`).
+  Sommerzeitumstellung (CET/CEST, konfiguriert in `src/PoolMonitor/TimeClientHelper.hpp`).
 - Das E-Ink Display aktualisiert sich **nur bei Datenänderungen** (per MQTT).
-
----
-
-## Changelog
-
-### 2026-06-10 — DNS-Failover, mDNS, QR-Code-Portal und 5-Minuten-Timeout
-
-- **DNS-Failover:** MQTT-Verbindung wird immer versucht, auch wenn der
-  Hostname nicht via DNS aufgelöst werden kann. PubSubClient löst DNS selbst
-  auf.
-- **mDNS:** Gerät registriert sich als `pool-monitor.local` im Netzwerk.
-- **WiFi-Disconnect entfernt:** Das explizite `WiFi.disconnect(true)` vor dem
-  Tiefschlaf wurde entfernt, damit der DHCP-Lease erhalten bleibt. Das Gerät
-  bleibt in der Router-Tabelle sichtbar.
-- **MQTT-Portal mit QR-Code:** Bei MQTT-Fehler startet ein
-  Konfigurationsportal. Display zeigt SSID, AP-IP und QR-Code.
-- **5-Minuten-Timeout:** Das Portal bleibt maximal 5 Minuten aktiv. Ohne
-  Benutzereingabe geht das Gerät in Tiefschlaf und wiederholt den
-  Verbindungsversuch beim nächsten Wake.
-- **upload_speed:** Auf 115200 Baud reduziert für Kompatibilität mit älteren
-  ESP32 rev1.0.
-- **QR-Code Bibliothek:** Verwendet ESP32-Builtin `esp_qrcode` — keine
-  zusätzliche Abhängigkeit.

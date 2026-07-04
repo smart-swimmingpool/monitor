@@ -2,20 +2,20 @@
 
 Thank you for your interest in contributing to the **Smart Swimming Pool Monitor** project!
 
-This document provides guidelines for contributing to the project. Please read it
-carefully before submitting your first pull request.
+This document provides guidelines for contributing. Please read it carefully
+before submitting your first pull request.
 
 ## Table of Contents
 
-- [Code of Conduct](#Code of Conduct)
-- [How to Contribute](#How to Contribute)
-- [Getting Started](#Getting Started)
-- [Development Workflow](#Development Workflow)
-- [Coding Standards](#Coding Standards)
-- [Pull Request Process](#Pull Request Process)
-- [Commit Message Guidelines](#Commit Message Guidelines)
-- [Quality Gates](#Quality Gates)
-- [Additional Resources](#Additional Resources)
+- [Code of Conduct](#code-of-conduct)
+- [How to Contribute](#how-to-contribute)
+- [Getting Started](#getting-started)
+- [Development Workflow](#development-workflow)
+- [Coding Standards](#coding-standards)
+- [Pull Request Process](#pull-request-process)
+- [Commit Message Guidelines](#commit-message-guidelines)
+- [Quality Gates](#quality-gates)
+- [Additional Resources](#additional-resources)
 
 ---
 
@@ -37,31 +37,30 @@ See also: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 - **Check existing issues**: Search
   [GitHub Issues](https://github.com/smart-swimmingpool/monitor/issues)
-  before creating a new one
-- **Use the issue template**: Provide detailed information about the bug
+  before creating a new one.
+- **Use the issue template**: Provide detailed information about the bug.
 - **Include**:
-  - Firmware version (from Web Dashboard or serial monitor)
-  - Hardware setup (ESP32 model, e-ink display)
+  - Firmware version (from serial monitor or Preferences)
+  - Hardware setup (ESP32 board variant, E-Ink display)
   - Steps to reproduce
   - Serial monitor output (if applicable)
-  - Screenshots (if display-related)
+  - Photos of the display (if display-related)
 
 ### Suggesting Enhancements
 
-- **Check the roadmap**: See [README.md](Readme.md) for planned features
+- **Check the roadmap**: See [Readme.md](Readme.md) for planned features.
 - **Discuss first**: Open a
   [GitHub Discussion](https://github.com/smart-swimmingpool/smart-swimmingpool.github.io/discussions)
-  to discuss your idea
-- **Check for duplicates**: Search existing issues and PRs
+  to discuss your idea.
+- **Check for duplicates**: Search existing issues and PRs.
 
 ### Submitting Pull Requests
 
-- **Fork the repository**: Create your own fork
-- **Create a feature branch**: Use descriptive branch names
-  (e.g., `feat/add-temperature-history`)
-- **Follow coding standards**: See below
-- **Test your changes**: Ensure all tests pass
-- **Update documentation**: Keep docs in sync with code changes
+- **Fork the repository** and create your branch from `main`.
+- **Use descriptive branch names** (e.g., `feat/add-temperature-history`).
+- **Follow coding standards** (see below).
+- **Test your changes** — ensure it builds and passes `platformio check`.
+- **Update documentation** if applicable.
 
 ---
 
@@ -69,10 +68,10 @@ See also: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ### Prerequisites
 
-- [PlatformIO](https://platformio.org/) installed
-- [Git](https://git-scm.com/) installed
-- Basic knowledge of C++ and ESP32 development
-- Understanding of MQTT protocol (for Home Assistant integration)
+- [PlatformIO](https://platformio.org/)
+- [Git](https://git-scm.com/)
+- Basic C++ and ESP32 development knowledge
+- Understanding of MQTT and Home Assistant MQTT Discovery
 
 ### Setting Up the Development Environment
 
@@ -81,43 +80,55 @@ See also: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 git clone https://github.com/smart-swimmingpool/monitor.git
 cd monitor
 
-# Install dependencies (handled by PlatformIO)
+# Build the firmware (automatically downloads dependencies)
 pio run -e LILYGO_T5_V231
 
-# Run local linting
-make lint-fix && make lint
+# Run static analysis
+pio check --environment LILYGO_T5_V231 --skip-packages
 
-# Build the project
-make build
-```text
+# Flash to device
+pio run -e LILYGO_T5_V231 --target upload
+```
 
----
-
-## Project Structure
+### Project Structure
 
 ```text
 monitor/
-├── src/                    # Main source code
-│   ├── GxGDE0213B72B/      # E-ink display driver
-│   ├── GxDEPG0213BN/      # Alternative e-ink display driver
-│   ├── main.cpp           # Main application entry point
-│   ├── OtaUpdater.cpp     # OTA update functionality
-│   └── Version.h          # Version information (auto-managed)
-├── lib/                    # External libraries
-├── .github/                # GitHub configuration
-│   ├── workflows/          # GitHub Actions workflows
-│   └── release-please-config.json
-├── .editorconfig           # Editor configuration
-├── .clang-format           # C++ code formatting rules
-├── CPPLINT.cfg             # C++ linting configuration
-├── Makefile                # Local development tasks
-├── platformio.ini          # PlatformIO project configuration
-├── Readme.md               # Project documentation
-├── CONTRIBUTING.md         # This file
-├── CODE_OF_CONDUCT.md      # Code of conduct
-├── CHANGELOG.md            # Release history (if exists)
-└── LICENSE                 # License information
-```text
+├── platformio.ini           # Build configuration
+├── Makefile                 # Local dev tasks (lint, build, format)
+├── CPPLINT.cfg              # C++ linting config
+├── src/
+│   ├── main.cpp             # Arduino entry point (setup, loop)
+│   └── PoolMonitor/         # Subsystem classes (namespace PoolMonitor)
+│       ├── Config.hpp
+│       ├── PoolMonitorContext.{hpp,cpp}
+│       ├── DisplayManager.{hpp,cpp}
+│       ├── NetworkManager.{hpp,cpp}
+│       ├── OtaUpdater.{hpp,cpp}
+│       ├── SystemMonitor.{hpp,cpp}
+│       └── TimeClientHelper.{hpp,cpp}
+├── docs/                    # Documentation (users, hardware, software)
+├── lib/                     # External libraries (managed by PlatformIO)
+├── .github/workflows/       # GitHub Actions CI
+└── .editorconfig, .clang-format, etc.
+```
+
+---
+
+## Development Workflow
+
+Before committing changes, always run:
+
+```bash
+# Format code
+make format
+
+# Build
+make build
+
+# Run static analysis
+pio check --environment LILYGO_T5_V231 --skip-packages
+```
 
 ---
 
@@ -127,41 +138,33 @@ This project follows the same coding standards as the Pool Controller project.
 
 ### Key Guidelines
 
-1. **Code Formatting**: Use `clang-format` with the provided configuration
+1. **Code Formatting**: Use `clang-format` with the provided `.clang-format`
 2. **Line Length**: Maximum 130 characters
 3. **Indentation**: 2 spaces (no tabs)
 4. **Pointer Alignment**: Right (`int* ptr`)
-5. **Naming Conventions**: Use descriptive names, follow existing patterns
-6. **Error Handling**: Always handle errors gracefully
-7. **Memory Management**: Be mindful of memory usage (ESP32 constraints)
-
-### Before Committing
-
-```bash
-# Format and lint your code
-make lint-fix && make lint
-
-# Build to ensure it compiles
-make build
-```text
+5. **Naming**: Use descriptive names, follow existing patterns
+6. **Error Handling**: Always handle errors explicitly, no silent failures
+7. **Memory Management**: Stack-allocated buffers preferred (ESP32 constraints)
+8. **Buffer Safety**: Always `snprintf()` instead of `sprintf()`
+9. **Resource Cleanup**: Always call `preferences.end()` before deep sleep/restart
 
 ---
 
 ## Pull Request Process
 
-1. **Fork the repository** and create your branch from `main`
-2. **Make your changes** following the coding standards
-3. **Test your changes** thoroughly
-4. **Update documentation** if applicable
-5. **Run quality checks**: `make lint-fix && make lint`
-6. **Commit your changes** with clear, descriptive messages
-7. **Push to your fork** and submit a pull request
+1. **Fork the repository** and create your branch from `main`.
+2. **Make your changes** following the coding standards.
+3. **Test your changes**: `make build && pio check --environment LILYGO_T5_V231 --skip-packages`.
+4. **Update documentation** if applicable (see `docs/`).
+5. **Run quality checks** (see [Quality Gates](#quality-gates)).
+6. **Commit** with a clear, descriptive message (see [Commit Message Guidelines](#commit-message-guidelines)).
+7. **Push to your fork** and submit a pull request.
 
 ### Pull Request Requirements
 
 - ✅ All CI checks pass (Super-Linter, PlatformIO CI)
 - ✅ Code follows project standards
-- ✅ Documentation is updated
+- ✅ Documentation is updated (if applicable)
 - ✅ No breaking changes (unless discussed)
 - ✅ Clear commit messages
 
@@ -177,9 +180,10 @@ type(scope): subject
 body
 
 footer
-```text
+```
 
 ### Types
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -189,6 +193,7 @@ footer
 - `chore`: Maintenance tasks
 
 ### Example
+
 ```text
 feat(display): add support for new e-ink display model
 
@@ -197,7 +202,7 @@ feat(display): add support for new e-ink display model
 - Add configuration options for display type
 
 Closes #456
-```text
+```
 
 ---
 
@@ -205,29 +210,30 @@ Closes #456
 
 All contributions must pass the following quality checks:
 
-1. **Super-Linter**: Code quality and style checks
-2. **PlatformIO CI**: Build verification
+1. **Super-Linter**: Code quality and style checks (Docker-based, via `make lint`)
+2. **PlatformIO CI**: Build verification and static analysis (`pio check`)
 3. **Manual Review**: Code review by maintainers
 
 ### Local Quality Checks
 
 ```bash
-# Run all quality checks
+# Auto-format code
+make format
+
+# Run Super-Linter (requires Docker)
 make lint
 
-# Auto-fix common issues
-make lint-fix
-
-# Build the project
+# Build firmware
 make build
-```text
 
----
+# Static analysis (no Docker needed)
+pio check --environment LILYGO_T5_V231 --skip-packages
+```
 
-## Thank You!
-
-Your contributions help make this project better for everyone. We appreciate your
-time and effort in improving the Smart Swimming Pool Monitor!
+> **Note**: `make lint` requires Docker to run
+> [Super-Linter](https://github.com/super-linter/super-linter).
+> Without Docker, run `pio check` and the individual linters listed in
+> [Readme.md](Readme.md#quality-checks) instead.
 
 ---
 
