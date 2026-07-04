@@ -12,7 +12,9 @@ Der Agent:
 - vermeidet unsichere dynamische Allokationen und ungeprüfte Heap-Nutzung.
 - folgt einem CI-regelbasierten Prozess (Build + Tests + Lint).
 
-## 1b. Empfohlene Hermes-Skills für dieses Repo
+## 1b. Empfohlene Skills für dieses Repo
+
+### Hermes-Skills (externe Skills per Skill-Tool laden)
 
 Für größere oder riskantere Änderungen in diesem Repository sollten diese Skills geladen werden:
 
@@ -23,6 +25,19 @@ Für größere oder riskantere Änderungen in diesem Repository sollten diese Sk
 - `requesting-code-review` — vor Commit/Push für Qualitäts- und Sicherheitschecks.
 - `subagent-driven-development` — für größere, klar trennbare Aufgaben.
 - `local-service-update-workflow` — wenn PlatformIO/CI/Update-Checks angepasst werden.
+
+### Projekt-Skill: Clean Code
+
+Dieser Skill ist **lokal im Projekt** unter `.opencode/skills/clean-code/SKILL.md` und muss vor/nach jeder Code-Änderung geladen werden:
+
+- `clean-code` — Clean-Code-Review und Quality-Gate für ESP32/Arduino-Firmware. Enthält 10 prüfbare Regeln (toter Code, DRY, Namenskonventionen, constexpr, Magic Numbers, Single Responsibility, Embedded Safety, Busy-Waits, Singletons, Include-Was-You-Use) sowie eine automatisierte Check-Suite.
+
+**Wann laden:**
+- ✅ Vor jedem Commit/PR
+- ✅ Bei Code-Review
+- ✅ Nach Feature-Implementierung
+- ✅ Bei Bug-Fix mit Refactoring-Potential
+- ❌ Nicht bei reinen Dokumentations- oder Konfig-Änderungen
 
 ## 2. Zielplattformen & Framework
 
