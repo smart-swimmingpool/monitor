@@ -109,6 +109,21 @@ class DisplayManager {
   static GxIO_Class io_;
   static GxEPD_Class display_;
   static U8G2_FOR_ADAFRUIT_GFX u8g2_for_adafruit_gfx_;
+
+  /**
+   * @brief Draw a degree-symbol circle at the given position.
+   *
+   * Draws three concentric circles to form a degree symbol next to temperature values.
+   */
+  static void drawDegreeSymbol(int16_t x, int16_t y);
+
+  /**
+   * @brief Draw the pump run-status icon at the given position.
+   * @param x X position.
+   * @param y Y position.
+   * @param isOn true draws the "running" icon; false clears the area.
+   */
+  static void drawPumpIcon(int16_t x, int16_t y, bool isOn);
 };
 
 }  // namespace PoolMonitor
