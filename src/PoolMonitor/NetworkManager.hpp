@@ -15,7 +15,6 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include <functional>
-#include <IPAddress.h>
 #include "Config.hpp"
 
 namespace PoolMonitor {
@@ -32,14 +31,6 @@ public:
   using MqttMessageCallback = std::function<void(char* topic, byte* payload, unsigned int length)>;
 
   NetworkManager() = default;
-
-  /**
-   * @brief Initialize WiFi connection.
-   * @param hostname Device hostname for mDNS.
-   * @param timeoutSeconds Connection timeout in seconds.
-   * @return true if WiFi connected successfully.
-   */
-  static bool begin(const char* hostname, uint32_t timeoutSeconds = 45);
 
   /**
    * @brief Initialize MQTT connection.
@@ -88,9 +79,6 @@ private:
   static WiFiClient wifiClient_;
   static PubSubClient mqttClient_;
   static MqttMessageCallback mqttCallback_;
-  static bool apModeActive_;
-  static bool mdnsRunning_;
-  static String hostname_;
 };
 
 }  // namespace PoolMonitor
