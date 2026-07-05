@@ -22,6 +22,7 @@
 #include "DisplayManager.hpp"
 #include "OtaUpdater.hpp"
 #include "TimeClientHelper.hpp"
+#include "MqttUtils.hpp"
 #include "../Version.h"
 
 namespace PoolMonitor {
@@ -59,51 +60,61 @@ PoolMonitorContext::~PoolMonitorContext() {
 }
 
 auto PoolMonitorContext::setup() -> void {
+  printBootBanner();
+  initSystem();
+
+  unsigned long totalUptime = updateBootAndUptimeStats();
+  PoolMonitor::beginTimeClient();
+
+  handleBootLoop(totalUptime);  // deep sleeps inside if boot loop, returns otherwise
+
+  if (isNetworkCycle()) {
+    runNetworkCycle(totalUptime);
+  } else {
+    runOfflineCycle(totalUptime);
+  }
+}
+
+auto PoolMonitorContext::printBootBanner() -> void {
   Serial.println(F(" ------------------------------------- "));
   Serial.println(F("| Pool Monitor                        |"));
   Serial.println(F("| www.smart-swimmingpool.com          |"));
   Serial.println(F(" ------------------------------------- "));
   Serial.printf("📦\tFW Version: %s\n", FW_VERSION);
   Serial.printf("📦\tGitHub Repo: %s\n", GITHUB_REPO);
+}
 
-  // Initialize system monitor and check for boot loops
+auto PoolMonitorContext::initSystem() -> void {
   SystemMonitor::begin();
   bootLoopDetected_ = SystemMonitor::detectBootLoop();
 
-  // Initialize preferences
   preferences_ = new Preferences();
   if (!preferences_->begin("pool-monitor", false)) {
     Serial.println("🛑\tFailed to open preferences");
-    while (1) {
-      delay(1000);
-    }
+    preferences_->end();
+    delete preferences_;
+    preferences_ = nullptr;
+    ESP.restart();
   }
 
-  // Register with SystemMonitor for safe NVS shutdown before restart
   SystemMonitor::setPreferences(preferences_);
-
-  // Initialize OTA updater
   OtaUpdater::begin(*preferences_);
+}
 
-  // Track boot count
-  unsigned int boot_count = preferences_->getUInt("boot_count", 0);
-  Serial.printf("Current boot count: %u\n", ++boot_count);
-  preferences_->putUInt("boot_count", boot_count);
+auto PoolMonitorContext::updateBootAndUptimeStats() -> unsigned long {
+  unsigned int bootCount = preferences_->getUInt("boot_count", 0);
+  Serial.printf("Current boot count: %u\n", ++bootCount);
+  preferences_->putUInt("boot_count", bootCount);
 
-  // Track cumulative uptime across sleep cycles
-  unsigned long total_uptime = preferences_->getULong("total_uptime", 0);
-  // Use actual sleep duration from last cycle (supports night-mode 4h sleeps)
+  unsigned long totalUptime = preferences_->getULong("total_uptime", 0);
   uint32_t lastSleepDuration = preferences_->getUInt("last_sleep_sec", TIME_TO_SLEEP_SECONDS);
-  total_uptime += lastSleepDuration;
+  totalUptime += lastSleepDuration;
   preferences_->remove("last_sleep_sec");
-  preferences_->putULong("total_uptime", total_uptime);
+  preferences_->putULong("total_uptime", totalUptime);
   Serial.printf("Total uptime: %lu seconds (%.1f hours, last sleep: %u s)\n",
-                total_uptime, total_uptime / 3600.0, lastSleepDuration);
+                totalUptime, totalUptime / 3600.0, lastSleepDuration);
 
-  // ── Power-save: WiFi/MQTT only every (SKIP_WIFI_WAKE_CYCLES + 1) wake-ups ──
   uint32_t cyclesWithoutWiFi = preferences_->getUInt("no_wifi_count", 0);
-
-  // Force network on first boot (no MQTT config exists yet → portal needed)
   bool hasConfig = (preferences_->getString("mqtt_server", "").length() > 0);
   bool doNetwork = !hasConfig || (cyclesWithoutWiFi >= SKIP_WIFI_WAKE_CYCLES);
 
@@ -117,80 +128,71 @@ auto PoolMonitorContext::setup() -> void {
                 doNetwork ? 0 : cyclesWithoutWiFi + 1,
                 SKIP_WIFI_WAKE_CYCLES);
 
-  // Initialize NTP time client
-  PoolMonitor::beginTimeClient();
+  return totalUptime;
+}
 
-  // ── Boot-loop safe mode ──
-  if (bootLoopDetected_) {
-    Serial.println("⚠️\tBoot loop detected! Entering safe mode — skipping network, using cached data");
-    // Reset counter so next wake tries normal boot instead of staying safe forever
-    SystemMonitor::clearBootLoopCounter();
-    initializeDisplay();
-    loadState();
-    reconstructTime(total_uptime);
-    DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
-                                  poolMode_.c_str(), lastUpdate_.c_str());
-    prepareForSleep();  // deep sleep, does not return
-  }
+auto PoolMonitorContext::handleBootLoop(unsigned long totalUptime) -> void {
+  if (!bootLoopDetected_) return;
 
-  // ── On network cycles: full display init + network + MQTT + display update ──
-  // ── On no-network cycles: E-Ink retains its image, skip all display ops  ──
-  if (doNetwork) {
-    initializeDisplay();
-    initializeNetwork();
-    initializeMqtt();
+  Serial.println("⚠️\tBoot loop detected! Entering safe mode — skipping network, using cached data");
+  SystemMonitor::clearBootLoopCounter();
+  initializeDisplay();
+  loadState();
+  reconstructTime(totalUptime);
+  DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
+                                poolMode_.c_str(), lastUpdate_.c_str());
+  prepareForSleep();
+}
 
-    // Boot successful — reached after WiFi + MQTT without crash
-    SystemMonitor::clearBootLoopCounter();
+auto PoolMonitorContext::isNetworkCycle() -> bool {
+  return preferences_ == nullptr || preferences_->getUInt("no_wifi_count", 0) == 0;
+}
 
-    // Load fresh data (MQTT callbacks may have updated NVS values)
-    loadState();
+auto PoolMonitorContext::runNetworkCycle(unsigned long totalUptime) -> void {
+  initializeDisplay();
+  initializeNetwork();
+  initializeMqtt();
 
-    // NTP sync
-    if (isNtpSyncNeeded()) {
-      Serial.println("⏰\tNTP sync needed - updating time from server");
-      lastUpdate_ = PoolMonitor::getCurrentTime();
-      preferences_->putString("last_update", lastUpdate_);
-      preferences_->putULong("last_ntp_sync", total_uptime);
+  SystemMonitor::clearBootLoopCounter();
+  loadState();
 
-      unsigned long synced_epoch = PoolMonitor::timeClient.getEpochTime();
-      preferences_->putULong("last_epoch", synced_epoch);
+  if (isNtpSyncNeeded()) {
+    Serial.println("⏰\tNTP sync needed - updating time from server");
+    lastUpdate_ = PoolMonitor::getCurrentTime();
+    preferences_->putString("last_update", lastUpdate_);
+    preferences_->putULong("last_ntp_sync", totalUptime);
 
-      Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
-                    lastUpdate_.c_str(), NTP_SYNC_INTERVAL_SECONDS);
-    } else {
-      reconstructTime(total_uptime);
-    }
+    unsigned long syncedEpoch = PoolMonitor::timeClient.getEpochTime();
+    preferences_->putULong("last_epoch", syncedEpoch);
 
-    // Safety net: process any retained MQTT messages that arrived after polling
-    NetworkManager::loop();
-    // Reload state in case late messages updated preferences
-    loadState();
-
-    // Always update display on network cycles (data was potentially refreshed)
-    Serial.println("🖥️\tUpdating display");
-    DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
-                                  poolMode_.c_str(), lastUpdate_.c_str());
-
-    // Remember displayed values for next comparison
-    preferences_->putFloat("last_display_pool", poolTemp_);
-    preferences_->putFloat("last_display_solar", solarTemp_);
-    preferences_->putBool("last_display_ppump", poolPumpOn_);
-    preferences_->putBool("last_display_spump", solarPumpOn_);
-    preferences_->putString("last_display_mode", poolMode_);
-
+    Serial.printf("⏰\tNTP synced successfully at %s (next sync in ~%d seconds)\n",
+                  lastUpdate_.c_str(), NTP_SYNC_INTERVAL_SECONDS);
   } else {
-    // No-network cycle: E-Ink retains image, skip all display operations
-    // Only reconstruct time and load cached state for bookkeeping
-    loadState();
-    reconstructTime(total_uptime);
-
-    // Load MQTT settings from preferences (for status display next cycle)
-    mqtt_server = preferences_->getString("mqtt_server", "");
-    mqtt_server_port = preferences_->getUInt("mqtt_port", 1883);
-
-    Serial.println("🖥️\tNo network — E-Ink retains image, display skipped (saving power)");
+    reconstructTime(totalUptime);
   }
+
+  NetworkManager::loop();
+  loadState();
+
+  Serial.println("🖥️\tUpdating display");
+  DisplayManager::updateDisplay(poolTemp_, solarTemp_, poolPumpOn_, solarPumpOn_,
+                                poolMode_.c_str(), lastUpdate_.c_str());
+
+  preferences_->putFloat("last_display_pool", poolTemp_);
+  preferences_->putFloat("last_display_solar", solarTemp_);
+  preferences_->putBool("last_display_ppump", poolPumpOn_);
+  preferences_->putBool("last_display_spump", solarPumpOn_);
+  preferences_->putString("last_display_mode", poolMode_);
+}
+
+auto PoolMonitorContext::runOfflineCycle(unsigned long totalUptime) -> void {
+  loadState();
+  reconstructTime(totalUptime);
+
+  mqtt_server = preferences_->getString("mqtt_server", "");
+  mqtt_server_port = preferences_->getUInt("mqtt_port", 1883);
+
+  Serial.println("🖥️\tNo network — E-Ink retains image, display skipped (saving power)");
 }
 
 auto PoolMonitorContext::loop() -> void {
@@ -559,43 +561,45 @@ auto PoolMonitorContext::saveState() -> void {
   Serial.println("💾\tState saved");
 }
 
-// Case-insensitive ASCII string comparison
-static bool equalsIgnoreCaseAscii(const char* lhs, const char* rhs) {
-  if (lhs == nullptr || rhs == nullptr) {
-    return false;
-  }
-  while (*lhs != '\0' && *rhs != '\0') {
-    if (std::tolower(static_cast<unsigned char>(*lhs)) !=
-        std::tolower(static_cast<unsigned char>(*rhs))) {
-      return false;
-    }
-    lhs++;
-    rhs++;
-  }
-  return *lhs == *rhs;
-}
+// ── MQTT dispatch table ──
 
-// Parse boolean MQTT state payloads used by Home Assistant topics
-static bool parseHomeAssistantBoolState(const char* value) {
-  if (value == nullptr) {
-    return false;
-  }
-  if (equalsIgnoreCaseAscii(value, "true")
-      || equalsIgnoreCaseAscii(value, "on")
-      || equalsIgnoreCaseAscii(value, "1")) {
-    return true;
-  }
-  if (equalsIgnoreCaseAscii(value, "false")
-      || equalsIgnoreCaseAscii(value, "off")
-      || equalsIgnoreCaseAscii(value, "0")) {
-    return false;
-  }
-  Serial.printf("⚠️\tUnexpected boolean MQTT payload: %s (defaulting to false)\n", value);
-  return false;
-}
+using MqttHandler = void (*)(const char* payload);
+
+struct TopicHandler {
+  const char* topic;
+  const char* label;
+  MqttHandler handler;
+};
+
+static const TopicHandler kTopicHandlers[] = {
+  { kHaTopicPoolTemp,  "Pool temperature",
+    [](const char* payload) {
+      poolTemp_ = String(payload).toFloat();
+      preferences_->putFloat("pool_temp", poolTemp_);
+    } },
+  { kHaTopicSolarTemp, "Solar temperature",
+    [](const char* payload) {
+      solarTemp_ = String(payload).toFloat();
+      preferences_->putFloat("solar_temp", solarTemp_);
+    } },
+  { kHaTopicPoolPump,  "Pool pump",
+    [](const char* payload) {
+      poolPumpOn_ = parseHomeAssistantBoolState(payload);
+      preferences_->putBool("pump_pool", poolPumpOn_);
+    } },
+  { kHaTopicSolarPump, "Solar pump",
+    [](const char* payload) {
+      solarPumpOn_ = parseHomeAssistantBoolState(payload);
+      preferences_->putBool("pump_solar", solarPumpOn_);
+    } },
+  { kHaTopicMode,      "Operation Mode",
+    [](const char* payload) {
+      poolMode_ = String(payload);
+      preferences_->putString("pool_mode", poolMode_);
+    } },
+};
 
 void PoolMonitorContext::handleMqttMessage(char* topic, byte* payload, unsigned int length) {
-  // Stack-allocated buffer instead of heap allocation
   char payloadCopy[MQTT_PAYLOAD_BUFFER_SIZE];
   size_t payloadLength = length;
   if (payloadLength >= sizeof(payloadCopy)) {
@@ -606,34 +610,15 @@ void PoolMonitorContext::handleMqttMessage(char* topic, byte* payload, unsigned 
   memcpy(payloadCopy, payload, payloadLength);
   payloadCopy[payloadLength] = '\0';
 
-  String payloadString = String(payloadCopy);
-
-  // Match Home Assistant state topics directly
-  if (strcmp(topic, kHaTopicPoolTemp) == 0) {
-    Serial.println("\tPool temperature: " + payloadString);
-    poolTemp_ = payloadString.toFloat();
-    preferences_->putFloat("pool_temp", poolTemp_);
-
-  } else if (strcmp(topic, kHaTopicSolarTemp) == 0) {
-    Serial.println("\tSolar temperature: " + payloadString);
-    solarTemp_ = payloadString.toFloat();
-    preferences_->putFloat("solar_temp", solarTemp_);
-
-  } else if (strcmp(topic, kHaTopicPoolPump) == 0) {
-    Serial.println("\tPool pump: " + payloadString);
-    poolPumpOn_ = parseHomeAssistantBoolState(payloadCopy);
-    preferences_->putBool("pump_pool", poolPumpOn_);
-
-  } else if (strcmp(topic, kHaTopicSolarPump) == 0) {
-    Serial.println("\tSolar pump: " + payloadString);
-    solarPumpOn_ = parseHomeAssistantBoolState(payloadCopy);
-    preferences_->putBool("pump_solar", solarPumpOn_);
-
-  } else if (strcmp(topic, kHaTopicMode) == 0) {
-    Serial.println("\tOperation Mode: " + payloadString);
-    poolMode_ = payloadString;
-    preferences_->putString("pool_mode", poolMode_);
+  for (const auto& entry : kTopicHandlers) {
+    if (strcmp(topic, entry.topic) == 0) {
+      Serial.println(String("\t") + entry.label + ": " + String(payloadCopy));
+      entry.handler(payloadCopy);
+      return;
+    }
   }
+
+  Serial.printf("⚠️\tUnknown MQTT topic: %s\n", topic);
 }
 
 auto PoolMonitorContext::isMqttConnected() -> bool {

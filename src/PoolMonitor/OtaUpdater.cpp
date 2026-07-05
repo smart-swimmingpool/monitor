@@ -341,14 +341,22 @@ bool OtaUpdater::isNewerVersion(const String &current, const String &latest) {
   return false;
 }
 
-// ── OTA Download + Flash ──
+// ── OTA: download response into Update stream ──
 
-bool OtaUpdater::downloadAndApply(const String &url) {
+/**
+ * @brief Perform HTTP GET on the firmware URL and validate the response.
+ * @param[in]  url       Firmware download URL.
+ * @param[out] http      HTTPClient to reuse (already connected).
+ * @param[out] totalSize Expected download size (from Content-Length).
+ * @param[out] stream    WiFiClient stream pointer for reading the body.
+ * @return true if the response is valid (HTTP 200, non-empty content).
+ */
+static bool openFirmwareDownload(const String &url, HTTPClient &http,
+                                 int &totalSize, WiFiClient *&stream) {
   WiFiClientSecure client;
   client.setCACert(kGitHubRootCA);
   client.setTimeout(10000);
 
-  HTTPClient http;
   http.begin(client, url);
   http.setUserAgent("PoolMonitor/1.0");
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -356,39 +364,43 @@ bool OtaUpdater::downloadAndApply(const String &url) {
   int httpCode = http.GET();
   if (httpCode != 200) {
     Serial.printf("🛑\tOTA: Download returned HTTP %d\n", httpCode);
-    http.end();
     return false;
   }
 
-  int totalSize = http.getSize();
+  totalSize = http.getSize();
   if (totalSize <= 0) {
     Serial.println("🛑\tOTA: Invalid content size");
-    http.end();
     return false;
   }
-
   Serial.printf("⬇️\tOTA: Download size: %d bytes\n", totalSize);
 
+  stream = http.getStreamPtr();
+  return true;
+}
+
+/**
+ * @brief Stream firmware data from WiFiClient into the Update object.
+ * @param stream     WiFiClient with firmware body ready to read.
+ * @param totalSize  Expected total download size.
+ * @param[out] progress Optional progress pointer (0-100 percentage, can be nullptr).
+ * @return Number of bytes successfully written to Update, or 0 on failure.
+ */
+static int streamToUpdate(WiFiClient *stream, int totalSize, int *progress) {
   if (!Update.begin(totalSize)) {
     Serial.printf("🛑\tOTA: Update.begin() failed: %s\n", Update.errorString());
-    http.end();
-    return false;
+    return 0;
   }
 
-  // Stream download in chunks with stall protection
-  WiFiClient *stream = http.getStreamPtr();
-  uint8_t buffer[kOtaBufferSize];
+  uint8_t buffer[OtaUpdater::kOtaBufferSize];
   int totalRead = 0;
   unsigned long lastProgressMs = millis();
 
-  while (http.connected() && totalRead < totalSize) {
-    // Abort if no progress for kDownloadTimeoutMs (stalled connection)
-    if (millis() - lastProgressMs > kDownloadTimeoutMs) {
+  while (stream->connected() && totalRead < totalSize) {
+    if (millis() - lastProgressMs > OtaUpdater::kDownloadTimeoutMs) {
       Serial.printf("🛑\tOTA: Download stalled for %lu ms, aborting (%d/%d)\n",
-                    kDownloadTimeoutMs, totalRead, totalSize);
+                    OtaUpdater::kDownloadTimeoutMs, totalRead, totalSize);
       Update.end(false);
-      http.end();
-      return false;
+      return 0;
     }
 
     size_t available = stream->available();
@@ -407,21 +419,36 @@ bool OtaUpdater::downloadAndApply(const String &url) {
     if (written != read) {
       Serial.printf("🛑\tOTA: Write error at byte %d: %s\n", totalRead, Update.errorString());
       Update.end(false);
-      http.end();
-      return false;
+      return 0;
     }
 
     totalRead += read;
     lastProgressMs = millis();
-    progress_ = (totalRead * 100) / totalSize;
-    Serial.printf("⬇️\tOTA: %d%% (%d/%d)\n", progress_, totalRead, totalSize);
+    if (progress) {
+      *progress = (totalRead * 100) / totalSize;
+    }
+    Serial.printf("⬇️\tOTA: %d%% (%d/%d)\n",
+                  progress ? *progress : 0, totalRead, totalSize);
   }
 
+  return totalRead;
+}
+
+bool OtaUpdater::downloadAndApply(const String &url) {
+  HTTPClient http;
+  int totalSize = 0;
+  WiFiClient *stream = nullptr;
+
+  if (!openFirmwareDownload(url, http, totalSize, stream)) {
+    http.end();
+    return false;
+  }
+
+  int totalRead = streamToUpdate(stream, totalSize, &progress_);
   http.end();
 
   if (totalRead != totalSize) {
     Serial.printf("🛑\tOTA: Incomplete download (%d / %d)\n", totalRead, totalSize);
-    Update.end(false);
     return false;
   }
 
@@ -432,9 +459,6 @@ bool OtaUpdater::downloadAndApply(const String &url) {
 
   Serial.println("✅\tOTA: Update successful! Rebooting...");
 
-  // Close Preferences so NVS writes from this wake cycle are finalized
-  // before restart — matches the AGENTS.md rule to always call
-  // preferences.end() before ESP.restart() or deep sleep.
   if (prefs_ != nullptr) {
     prefs_->end();
   }
@@ -442,7 +466,7 @@ bool OtaUpdater::downloadAndApply(const String &url) {
   Serial.flush();
   delay(1000);
   ESP.restart();
-  return true;  // Never actually reached
+  return true;
 }
 
 }  // namespace PoolMonitor
