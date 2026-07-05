@@ -352,11 +352,8 @@ bool OtaUpdater::isNewerVersion(const String &current, const String &latest) {
  * @return true if the response is valid (HTTP 200, non-empty content).
  */
 static bool openFirmwareDownload(const String &url, HTTPClient &http,
+                                 WiFiClientSecure &client,
                                  int &totalSize, WiFiClient *&stream) {
-  WiFiClientSecure client;
-  client.setCACert(kGitHubRootCA);
-  client.setTimeout(10000);
-
   http.begin(client, url);
   http.setUserAgent("PoolMonitor/1.0");
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
@@ -435,11 +432,18 @@ static int streamToUpdate(WiFiClient *stream, int totalSize, int *progress) {
 }
 
 bool OtaUpdater::downloadAndApply(const String &url) {
+  WiFiClientSecure client;
+  client.setCACert(kGitHubRootCA);
+  client.setTimeout(10000);
+
   HTTPClient http;
+  http.setUserAgent("PoolMonitor/1.0");
+  http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+
   int totalSize = 0;
   WiFiClient *stream = nullptr;
 
-  if (!openFirmwareDownload(url, http, totalSize, stream)) {
+  if (!openFirmwareDownload(url, http, client, totalSize, stream)) {
     http.end();
     return false;
   }

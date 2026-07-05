@@ -43,7 +43,7 @@ bool parseHomeAssistantBoolState(const char* value) {
       || equalsIgnoreCaseAscii(value, "0")) {
     return false;
   }
-  printf("⚠️\tUnexpected boolean MQTT payload: %s (defaulting to false)\n", value);
+  Serial.printf("⚠️\tUnexpected boolean MQTT payload: %s (defaulting to false)\n", value);
   return false;
 }
 

@@ -629,7 +629,7 @@ auto PoolMonitorContext::isWiFiConnected() -> bool {
   return NetworkManager::isWiFiConnected();
 }
 
-bool PoolMonitorContext::isNtpSyncNeeded() {
+auto PoolMonitorContext::isNtpSyncNeeded() -> bool {
   unsigned long last_ntp_sync = preferences_->getULong("last_ntp_sync", 0);
   unsigned long total_uptime = preferences_->getULong("total_uptime", 0);
 
