@@ -71,55 +71,34 @@ struct PoolMonitorContext final {
   static auto isNtpSyncNeeded() -> bool;
 
 private:
-  /**
-   * @brief Initialize display and show initial screen.
-   */
+  // ── Setup lifecycle (phases of setup())                                   ──
+
+  static auto printBootBanner() -> void;
+  auto initSystem() -> void;
+  auto updateBootAndUptimeStats() -> unsigned long;
+  auto handleBootLoop(unsigned long totalUptime) -> void;
+  auto isNetworkCycle() -> bool;
+  auto runNetworkCycle(unsigned long totalUptime) -> void;
+  auto runOfflineCycle(unsigned long totalUptime) -> void;
+
+  // ── Subsystem helpers                                                      ──
+
   auto initializeDisplay() -> void;
-
-  /**
-   * @brief Initialize network connections.
-   */
   auto initializeNetwork() -> void;
-
-  /**
-   * @brief Show setup screen with QR code for WiFi configuration.
-   */
-  static auto showSetupScreen() -> void;
-
-  /**
-   * @brief Show screen when WiFi connection is successful.
-   */
-  static auto showWiFiConnectedScreen() -> void;
-
-  /**
-   * @brief Show screen when WiFi connection fails.
-   */
-  static auto showWiFiConnectionFailedScreen() -> void;
-
-  /**
-   * @brief Initialize MQTT subscriptions.
-   */
   auto initializeMqtt() -> void;
 
-  /**
-   * @brief Load saved state from Preferences.
-   */
-  auto loadState() -> void;
+  static auto showSetupScreen() -> void;
+  static auto showWiFiConnectedScreen() -> void;
+  static auto showWiFiConnectionFailedScreen() -> void;
 
-  /**
-   * @brief Save current state to Preferences.
-   */
+  auto loadState() -> void;
   auto saveState() -> void;
 
-  /**
-   * @brief Handle incoming MQTT messages.
-   */
   static auto handleMqttMessage(char* topic, byte* payload, unsigned int length) -> void;
 
   bool bootLoopDetected_ = false;
   bool stateLoaded_ = false;
 
-  // MQTT settings (static for access from callbacks)
   static String mqtt_server;
   static uint16_t mqtt_server_port;
 };

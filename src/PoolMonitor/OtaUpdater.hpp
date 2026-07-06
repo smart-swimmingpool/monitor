@@ -88,6 +88,9 @@ public:
   /// Max milliseconds without progress before aborting a stalled download.
   static constexpr unsigned long kDownloadTimeoutMs = 30000UL;
 
+  /// Buffer size for OTA download chunks.
+  static constexpr int kOtaBufferSize = 4096;
+
 private:
   // ── GitHub API ──
   static bool fetchLatestRelease();
@@ -111,8 +114,6 @@ private:
   static bool updateAvailable_;
   static bool updateInProgress_;
   static int progress_;
-
-  static constexpr int kOtaBufferSize = 4096;
 };
 
 }  // namespace PoolMonitor
