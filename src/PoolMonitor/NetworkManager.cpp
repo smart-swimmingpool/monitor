@@ -17,12 +17,21 @@ WiFiClient NetworkManager::wifiClient_;
 PubSubClient NetworkManager::mqttClient_(wifiClient_);
 NetworkManager::MqttMessageCallback NetworkManager::mqttCallback_ = nullptr;
 
-bool NetworkManager::beginMqtt(const char* server, uint16_t port, const char* clientId) {
+bool NetworkManager::beginMqtt(const char* server, uint16_t port, const char* clientId,
+                               const char* username, const char* password) {
   mqttClient_.setServer(server, port);
 
   Serial.printf("Attempting MQTT connection to %s:%u...\n", server, port);
 
-  if (mqttClient_.connect(clientId)) {
+  bool connected = false;
+  if (username != nullptr && username[0] != '\0') {
+    Serial.printf("  Authenticating as user \"%s\"\n", username);
+    connected = mqttClient_.connect(clientId, username, password);
+  } else {
+    connected = mqttClient_.connect(clientId);
+  }
+
+  if (connected) {
     Serial.println("MQTT connected");
     return true;
   } else {

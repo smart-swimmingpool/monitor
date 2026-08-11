@@ -29,6 +29,8 @@ namespace PoolMonitor {
 
 String PoolMonitorContext::mqtt_server;
 uint16_t PoolMonitorContext::mqtt_server_port = 1883;
+String PoolMonitorContext::mqtt_user;
+String PoolMonitorContext::mqtt_pass;
 
 static float poolTemp_ = 0.0f;
 static float solarTemp_ = 0.0f;
@@ -191,6 +193,8 @@ auto PoolMonitorContext::runOfflineCycle(unsigned long totalUptime) -> void {
 
   mqtt_server = preferences_->getString("mqtt_server", "");
   mqtt_server_port = preferences_->getUInt("mqtt_port", 1883);
+  mqtt_user = preferences_->getString("mqtt_user", "");
+  mqtt_pass = preferences_->getString("mqtt_pass", "");
 
   Serial.println("🖥️\tNo network — E-Ink retains image, display skipped (saving power)");
 }
@@ -432,7 +436,9 @@ void PoolMonitorContext::showWiFiConnectedScreen() {
 
   // Connect to MQTT
   if (NetworkManager::beginMqtt(PoolMonitorContext::mqtt_server.c_str(),
-                                PoolMonitorContext::mqtt_server_port, DEVICE_NAME)) {
+                                PoolMonitorContext::mqtt_server_port, DEVICE_NAME,
+                                PoolMonitorContext::mqtt_user.c_str(),
+                                PoolMonitorContext::mqtt_pass.c_str())) {
     Serial.println("MQTT connected");
   }
 }
@@ -469,10 +475,41 @@ auto PoolMonitorContext::initializeNetwork() -> void {
   // Define custom settings for MQTT
   PoolMonitorContext::mqtt_server = WiFiSettings.string("mqtt_server", "", "MQTT Hostname");
   PoolMonitorContext::mqtt_server_port = WiFiSettings.integer("mqtt_port", 1, 65535, 1883, "MQTT Port");
+  PoolMonitorContext::mqtt_user = WiFiSettings.string("mqtt_user", 64, "", "MQTT Username");
+  PoolMonitorContext::mqtt_pass = WiFiSettings.string("mqtt_pass", 64, "", "MQTT Password");
+
+  // Match the pool-controller's web portal look & feel (dark glassmorphism)
+  WiFiSettings.html("style", R"css(
+html{background:#06121e;font-family:'Inter',system-ui,sans-serif}
+body{background:radial-gradient(ellipse at 50% 0%,rgba(0,119,182,0.15) 0%,transparent 60%),linear-gradient(180deg,#0a1e2f 0%,#06121e 100%);color:#e2f0f7;max-width:30em;padding:1.5em;margin:1.5em auto;border:1px solid rgba(0,200,220,0.12);border-radius:16px;box-shadow:0 8px 32px 0 rgba(0,0,0,0.5)}
+h1{background:linear-gradient(135deg,#e2f0f7 30%,#00e5ff 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#00e5ff;font-weight:700;letter-spacing:-0.025em;margin-bottom:1rem}
+label{display:block;color:#8aadc4;font-size:0.875rem;margin-bottom:0.4rem}
+select,input:not([type^=c]){display:block;width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(0,200,220,0.1);border-radius:8px;color:#e2f0f7;padding:0.75rem 1rem;font-size:1rem;box-sizing:border-box}
+:not([type^=s]):focus{outline:none;border-color:#00e5ff;box-shadow:0 0 0 3px rgba(0,229,255,0.2)}
+a{color:#48cae4}
+hr{border:none;border-top:1px solid rgba(0,200,220,0.12);margin:1.5em 0}
+.w,.i{background:rgba(0,180,216,0.06);border:1px solid rgba(0,200,220,0.1);border-radius:8px;color:#8aadc4;padding:.6em .8em}
+.c{color:#8aadc4;font-size:0.8rem}
+form[action="/restart"] input[type=submit]{display:inline-block;background:transparent;border:1px solid rgba(0,200,220,0.3);color:#8aadc4;border-radius:8px;padding:.5rem 1rem;font-weight:600;cursor:pointer}
+form:not([action]) input[type=submit]{background:linear-gradient(135deg,#00b4d8,#00e5ff);border:none;border-radius:8px;color:#000;font-weight:600;padding:.75rem;cursor:pointer;box-shadow:0 4px 14px rgba(0,229,255,0.2)}
+form:not([action]) input[type=submit]:hover{box-shadow:0 6px 20px rgba(0,229,255,0.35)}
+)css", false);
+
+  // Mask the MQTT password (and optional portal password) fields
+  WiFiSettings.html("script", R"js(
+(function(){
+  var p=document.getElementsByName('mqtt_pass');if(p.length)p[0].type='password';
+  var q=document.getElementsByName('WiFiSettings-password');if(q.length)q[0].type='password';
+})();
+)js", false);
+
+  WiFiSettings.info("Pool Monitor \u00b7 www.smart-swimmingpool.com");
 
   // Save MQTT settings to preferences for later use
   preferences_->putString("mqtt_server", PoolMonitorContext::mqtt_server);
   preferences_->putUInt("mqtt_port", PoolMonitorContext::mqtt_server_port);
+  preferences_->putString("mqtt_user", PoolMonitorContext::mqtt_user);
+  preferences_->putString("mqtt_pass", PoolMonitorContext::mqtt_pass);
 
   // Connect to WiFi with timeout
   WiFiSettings.connect(true, 45);
@@ -495,7 +532,9 @@ auto PoolMonitorContext::initializeMqtt() -> void {
 
   // Connect to MQTT
   if (!NetworkManager::beginMqtt(PoolMonitorContext::mqtt_server.c_str(),
-                                PoolMonitorContext::mqtt_server_port, DEVICE_NAME)) {
+                                PoolMonitorContext::mqtt_server_port, DEVICE_NAME,
+                                PoolMonitorContext::mqtt_user.c_str(),
+                                PoolMonitorContext::mqtt_pass.c_str())) {
     Serial.println("⚠️\tMQTT connection failed");
     return;
   }

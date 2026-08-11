@@ -101,6 +101,8 @@ private:
 
   static String mqtt_server;
   static uint16_t mqtt_server_port;
+  static String mqtt_user;
+  static String mqtt_pass;
 };
 
 }  // namespace PoolMonitor

@@ -39,9 +39,12 @@ public:
    * @param server MQTT server hostname or IP.
    * @param port MQTT server port.
    * @param clientId MQTT client ID.
+   * @param username Optional MQTT username. Empty string or nullptr → anonymous.
+   * @param password Optional MQTT password (ignored when username is empty).
    * @return true if MQTT connected successfully.
    */
-  static bool beginMqtt(const char* server, uint16_t port, const char* clientId);
+  static bool beginMqtt(const char* server, uint16_t port, const char* clientId,
+                        const char* username = nullptr, const char* password = nullptr);
 
   /** @brief Maintain WiFi and MQTT connections. */
   static void loop();
