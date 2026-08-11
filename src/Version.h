@@ -10,7 +10,7 @@
 #define SRC_VERSION_H_
 
 #ifndef FW_VERSION
-#define FW_VERSION "0.0.0"  // x-release-please-version
+#define FW_VERSION "3.1.0"  // x-release-please-version
 #endif
 
 #endif  // SRC_VERSION_H_

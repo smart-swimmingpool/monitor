@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0](https://github.com/smart-swimmingpool/monitor/compare/v3.0.1...v3.1.0) (2026-08-11)
+
+
+### Features
+
+* optional MQTT username/password with portal restyling ([9b0ab7a](https://github.com/smart-swimmingpool/monitor/commit/9b0ab7adc46a50ccc266a4e70bba0e459e9b7ca9))
+
+
+### Bug Fixes
+
+* code review findings — dangling reference, printf, trailing return type ([c6c3bc4](https://github.com/smart-swimmingpool/monitor/commit/c6c3bc4eab7e3e3d28f15c69b2f64a12b6c84e49))
+* cpplint header guard style in Version.h (SRC_VERSION_H_) ([685f6e1](https://github.com/smart-swimmingpool/monitor/commit/685f6e1ca5d90731059b0e2b99172d42100ef5e9))
+* **license:** add SPDX-License-Identifier to all source files ([61135d6](https://github.com/smart-swimmingpool/monitor/commit/61135d6a8d3dda5d8305c2760cb6c54b33b5f024))
+
 ## [Unreleased]
 
 ## [3.0.1] - 2026-06-27
