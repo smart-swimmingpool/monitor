@@ -66,33 +66,22 @@ distributors like Reichelt, Pollin, Conrad (DE/AT/CH).
 
 ## Compatible Board Variants
 
-The TTGO T5 series comes in multiple revisions. The firmware supports:
+The TTGO T5 series comes in multiple revisions. The firmware currently supports one variant:
 
 | Board Variant | Display Panel | Status | Notes |
 |--------------|---------------|--------|-------|
 | **T5 V2.3.1 (V231)** | 2.13" GxDEPG0213BN (b/w) | ✅ **Default** | **Recommended** — most recent, actively tested |
-| T5 V1.2 / V2.4 | 2.13" GxGDE0213B1 (b/w) | ✅ Supported | Older panel, different driver |
-| T5 V2.0 / V2.3 | 2.13" GxGDE0213B1 (b/w) | ✅ Supported | No SD card slot |
-| T5 V2.1 | 2.9" GxGDEH029A1 (b/w) | ✅ Supported | Larger 2.9" display |
-| T5 V2.2 | 2.9" GxGDEH029A1 (b/w) | ✅ Supported | Different display pinout |
-| T5 V2.8 | 2.7" GxGDEW027W3 (b/w) | ✅ Supported | With audio DAC onboard |
 
-To select a different variant, edit `src/board_def.h` and set the corresponding
-define at the top of the file:
-
-```cpp
-#define LILYGO_T5_V231 1   // default — comment this out for other variants
-// #define TTGO_T5_2_1  1  // example: uncomment for 2.9" variant
-```
-
-Then rebuild the firmware (see [Software Guide](software-guide.md)).
+Other T5 revisions (V1.2, V2.0–V2.4, V2.8, 2.7"/2.9" panels) use different display
+drivers or pinouts and are **not supported** by the current firmware. Adding a
+variant requires a new PlatformIO environment, the matching GxEPD display driver
+and adapted pins in `src/PoolMonitor/Config.hpp` — contributions are welcome.
 
 ---
 
 ## Pin Assignment
 
-The pin configuration is defined in `src/board_def.h` and varies by board
-variant. For the default **V2.3.1 (V231)** board:
+The pin configuration is defined in `src/PoolMonitor/Config.hpp`. For the **V2.3.1 (V231)** board:
 
 | Signal | GPIO | Notes |
 | --- | --- | --- |
@@ -454,4 +443,4 @@ Details in the [Users Guide](users-guide.md).
 - [GxEPD Library](https://github.com/ZinggJM/GxEPD)
 - [ESP32 Datasheet](https://www.espressif.com/en/products/socs/esp32)
 - [Pool Controller Hardware Guide](https://github.com/smart-swimmingpool/pool-controller/blob/main/docs/hardware-guide.md)
-- [Board definition source](https://github.com/smart-swimmingpool/monitor/blob/main/src/board_def.h)
+- [Pin configuration source](https://github.com/smart-swimmingpool/monitor/blob/main/src/PoolMonitor/Config.hpp)

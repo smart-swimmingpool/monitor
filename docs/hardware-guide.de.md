@@ -65,33 +65,23 @@ wie Reichelt, Pollin, Conrad (DE/AT/CH) erhältlich.
 
 ## Kompatible Board-Varianten
 
-Die TTGO T5 Serie gibt es in mehreren Revisionen. Die Firmware unterstützt:
+Die TTGO T5 Serie gibt es in mehreren Revisionen. Die Firmware unterstützt derzeit eine Variante:
 
 | Board-Variante | Display-Panel | Status | Hinweise |
 |----------------|---------------|--------|----------|
 | **T5 V2.3.1 (V231)** | 2.13" GxDEPG0213BN (s/w) | ✅ **Standard** | **Empfohlen** — aktuellste Revision, aktiv getestet |
-| T5 V1.2 / V2.4 | 2.13" GxGDE0213B1 (s/w) | ✅ Unterstützt | Älteres Panel, anderer Treiber |
-| T5 V2.0 / V2.3 | 2.13" GxGDE0213B1 (s/w) | ✅ Unterstützt | Ohne SD-Kartenslot |
-| T5 V2.1 | 2.9" GxGDEH029A1 (s/w) | ✅ Unterstützt | Größeres 2.9" Display |
-| T5 V2.2 | 2.9" GxGDEH029A1 (s/w) | ✅ Unterstützt | Andere Display-Pinbelegung |
-| T5 V2.8 | 2.7" GxGDEW027W3 (s/w) | ✅ Unterstützt | Mit Audio-DAC |
 
-Um eine andere Variante auszuwählen, `src/board_def.h` editieren und den
-entsprechenden Define setzen:
-
-```cpp
-#define LILYGO_T5_V231 1   // Standard — für andere Varianten auskommentieren
-// #define TTGO_T5_2_1  1  // Beispiel: für 2.9"-Variante aktivieren
-```
-
-Dann die Firmware neu bauen (siehe [Software Guide](software-guide.de.md)).
+Andere T5-Revisionen (V1.2, V2.0–V2.4, V2.8, 2,7"/2,9"-Panels) nutzen andere
+Display-Treiber oder Pinbelegungen und werden von der aktuellen Firmware **nicht
+unterstützt**. Für eine weitere Variante sind ein eigenes PlatformIO-Environment,
+der passende GxEPD-Display-Treiber und angepasste Pins in
+`src/PoolMonitor/Config.hpp` nötig — Beiträge sind willkommen.
 
 ---
 
 ## Pinbelegung
 
-Die Pin-Konfiguration ist in `src/board_def.h` definiert und variiert je nach
-Board-Variante. Für das Standard-Board **V2.3.1 (V231)**:
+Die Pin-Konfiguration ist in `src/PoolMonitor/Config.hpp` definiert. Für das **V2.3.1 (V231)**:
 
 | Signal | GPIO | Hinweise |
 | --- | --- | --- |
@@ -449,4 +439,4 @@ Details im [Users Guide](users-guide.de.md).
 - [GxEPD Bibliothek](https://github.com/ZinggJM/GxEPD)
 - [ESP32 Datenblatt](https://www.espressif.com/en/products/socs/esp32)
 - [Pool Controller Hardware Guide](https://github.com/smart-swimmingpool/pool-controller/blob/main/docs/hardware-guide.md)
-- [Board-Definitionen (Quelle)](https://github.com/smart-swimmingpool/monitor/blob/main/src/board_def.h)
+- [Pin-Konfiguration (Quelle)](https://github.com/smart-swimmingpool/monitor/blob/main/src/PoolMonitor/Config.hpp)
