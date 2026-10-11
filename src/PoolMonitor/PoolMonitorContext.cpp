@@ -119,13 +119,18 @@ auto PoolMonitorContext::updateBootAndUptimeStats() -> unsigned long {
 
   uint32_t cyclesWithoutWiFi = preferences_->getUInt("no_wifi_count", 0);
   bool hasConfig = (preferences_->getString("mqtt_server", "").length() > 0);
-  bool doNetwork = !hasConfig || (cyclesWithoutWiFi >= SKIP_WIFI_WAKE_CYCLES);
 
   // Scale no_wifi_count increment by actual sleep duration so a 4-hour
   // night sleep advances the counter by ~80 cycles (14400/180) instead
   // of only 1, preventing network-skip on the post-night wake.
   uint32_t skipIncrement = lastSleepDuration / TIME_TO_SLEEP_SECONDS;
   if (skipIncrement < 1) skipIncrement = 1;
+  // Apply the elapsed intervals before the network decision so a long
+  // night sleep triggers the catch-up on this wake, not one wake later.
+  uint32_t effectiveCycles = (cyclesWithoutWiFi > 0xFFFFFFFF - skipIncrement)
+                                 ? 0xFFFFFFFF
+                                 : cyclesWithoutWiFi + skipIncrement;
+  bool doNetwork = !hasConfig || (effectiveCycles >= SKIP_WIFI_WAKE_CYCLES);
 
   if (doNetwork) {
     preferences_->putUInt("no_wifi_count", 0);
@@ -134,7 +139,7 @@ auto PoolMonitorContext::updateBootAndUptimeStats() -> unsigned long {
   }
   Serial.printf("📡\tNetwork cycle: %s (%u/%u without WiFi, last sleep: %u s, inc: %u)\n",
                 doNetwork ? "YES" : "NO",
-                doNetwork ? 0 : cyclesWithoutWiFi + 1,
+                doNetwork ? 0 : effectiveCycles,
                 SKIP_WIFI_WAKE_CYCLES,
                 lastSleepDuration,
                 skipIncrement);
@@ -238,7 +243,8 @@ auto PoolMonitorContext::prepareForSleep() -> void {
   unsigned long totalUptime = preferences_->getULong("total_uptime", 0);
   unsigned long lastEpoch = preferences_->getULong("last_epoch", 0);
 
-  if (lastEpoch > 0) {
+  constexpr unsigned long kMinPlausibleEpoch = 1577836800UL;
+  if (lastEpoch >= kMinPlausibleEpoch) {
     // Reconstruct current local time to check if we're in the night window
     unsigned long lastNtpSync = preferences_->getULong("last_ntp_sync", 0);
     unsigned long elapsed = 0;
@@ -266,7 +272,7 @@ auto PoolMonitorContext::prepareForSleep() -> void {
                           - currentMinute * 60 - currentSecond;
       }
 
-      if (secondsUntilEnd > 60 && sleepSeconds > static_cast<uint32_t>(secondsUntilEnd)) {
+      if (secondsUntilEnd > 0 && sleepSeconds > static_cast<uint32_t>(secondsUntilEnd)) {
         sleepSeconds = secondsUntilEnd;
         Serial.printf("🌙\tClamping night sleep to %d sec (wake at %02d:00)\n",
                       sleepSeconds, NIGHT_END_HOUR);
