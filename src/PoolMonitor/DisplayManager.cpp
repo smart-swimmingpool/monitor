@@ -51,6 +51,7 @@ void DisplayManager::displayText(const char* text, int16_t y, uint8_t align, int
   display_.print(text);
 }
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 void DisplayManager::initDisplay() {
   Serial.println("🖥️\tInitializing display with static content...");
 
@@ -93,6 +94,7 @@ void DisplayManager::initDisplay() {
   fullUpdate();
 }
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 void DisplayManager::updateDisplay(float poolTemp, float solarTemp, bool poolPumpOn,
                                    bool solarPumpOn, const char* mode, const char* lastUpdate) {
   Serial.println("🖥️\tUpdating display");
@@ -161,14 +163,7 @@ void DisplayManager::fullUpdate() {
   display_.update();
 }
 
-uint16_t DisplayManager::getWidth() {
-  return display_.width();
-}
-
-uint16_t DisplayManager::getHeight() {
-  return display_.height();
-}
-
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 auto DisplayManager::getDisplay() -> GxEPD_Class& {
   return display_;
 }
