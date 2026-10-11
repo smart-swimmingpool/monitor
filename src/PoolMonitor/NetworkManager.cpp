@@ -17,6 +17,7 @@ WiFiClient NetworkManager::wifiClient_;
 PubSubClient NetworkManager::mqttClient_(wifiClient_);
 NetworkManager::MqttMessageCallback NetworkManager::mqttCallback_ = nullptr;
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 bool NetworkManager::beginMqtt(const char* server, uint16_t port, const char* clientId,
                                const char* username, const char* password) {
   mqttClient_.setServer(server, port);
@@ -46,10 +47,12 @@ void NetworkManager::loop() {
   }
 }
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 bool NetworkManager::isWiFiConnected() {
   return WiFi.status() == WL_CONNECTED;
 }
 
+// cppcheck-suppress unusedFunction ; called from PoolMonitorContext.cpp (cross-TU)
 bool NetworkManager::isMqttConnected() {
   return mqttClient_.connected();
 }
