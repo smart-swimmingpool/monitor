@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0](https://github.com/smart-swimmingpool/monitor/compare/v3.1.0...v3.2.0) (2026-10-11)
+
+
+### Features
+
+* night mode — scale skip counter and suppress cppcheck cross-TU false positives ([c478a7d](https://github.com/smart-swimmingpool/monitor/commit/c478a7d7a2290d531f558e0a2f541208a9f8d3fb))
+
+
+### Bug Fixes
+
+* address Codex review findings in night mode ([ae6ba63](https://github.com/smart-swimmingpool/monitor/commit/ae6ba638f41c5f4d1f59b1ad4de07f47bf6efa79))
+* preserve daytime skip cadence, apply night catch-up only for long sleeps ([2d3afce](https://github.com/smart-swimmingpool/monitor/commit/2d3afce7f78a5ac56a1c8f2128a3ccb7cbbe97c7))
+
 ## [3.1.0](https://github.com/smart-swimmingpool/monitor/compare/v3.0.1...v3.1.0) (2026-08-11)
 
 
