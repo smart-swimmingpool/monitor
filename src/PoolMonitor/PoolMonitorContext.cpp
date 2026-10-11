@@ -125,11 +125,15 @@ auto PoolMonitorContext::updateBootAndUptimeStats() -> unsigned long {
   // of only 1, preventing network-skip on the post-night wake.
   uint32_t skipIncrement = lastSleepDuration / TIME_TO_SLEEP_SECONDS;
   if (skipIncrement < 1) skipIncrement = 1;
-  // Apply the elapsed intervals before the network decision so a long
-  // night sleep triggers the catch-up on this wake, not one wake later.
-  uint32_t effectiveCycles = (cyclesWithoutWiFi > 0xFFFFFFFF - skipIncrement)
-                                 ? 0xFFFFFFFF
-                                 : cyclesWithoutWiFi + skipIncrement;
+  // Apply the elapsed intervals before the network decision only for
+  // long (night) sleeps so the catch-up triggers on this wake. Normal
+  // daytime sleeps keep the documented SKIP_WIFI_WAKE_CYCLES cadence.
+  uint32_t effectiveCycles = cyclesWithoutWiFi;
+  if (lastSleepDuration > TIME_TO_SLEEP_SECONDS) {
+    effectiveCycles = (cyclesWithoutWiFi > 0xFFFFFFFF - skipIncrement)
+                          ? 0xFFFFFFFF
+                          : cyclesWithoutWiFi + skipIncrement;
+  }
   bool doNetwork = !hasConfig || (effectiveCycles >= SKIP_WIFI_WAKE_CYCLES);
 
   if (doNetwork) {
