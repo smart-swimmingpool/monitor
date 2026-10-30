@@ -46,18 +46,18 @@ im selben WLAN wie der Monitor erreichbar sein.
 
 Das E-Ink-Display zeigt folgende Informationen:
 
-```text
-┌──────────────────────────────────┐
-│ 🌊  Pool-Temperatur     25.3 °C │
-│ ☀️  Solar-Temperatur    55.1 °C │
-│                                  │
-│ ⏱️  Pool-Pumpe          EIN     │
-│ ⏱️  Solar-Pumpe         EIN     │
-│ ⏱️  Modus               auto    │
-│                                  │
-│         14:30                    │
-│    www.smart-swimmingpool.com    │
-└──────────────────────────────────┘
+```svgbob
+.----------------------------------.
+| Pool-Temperatur     25.3 °C      |
+| Solar-Temperatur    55.1 °C      |
+|                                  |
+| Pool-Pumpe          EIN          |
+| Solar-Pumpe         EIN          |
+| Modus               auto         |
+|                                  |
+|         14:30                    |
+|    www.smart-swimmingpool.com    |
+'----------------------------------'
 ```
 
 - **Temperaturen** werden bei jeder neuen MQTT-Nachricht aktualisiert.

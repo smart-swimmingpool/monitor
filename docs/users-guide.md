@@ -45,18 +45,18 @@ the same WiFi network as the monitor.
 
 The E-Ink display shows the following information:
 
-```text
-┌──────────────────────────────────┐
-│ 🌊  Pool Temperature    25.3 °C │
-│ ☀️  Solar Temperature   55.1 °C │
-│                                  │
-│ ⏱️  Pump Pool           ON      │
-│ ⏱️  Solar Pump          ON      │
-│ ⏱️  Mode                auto    │
-│                                  │
-│         14:30                    │
-│    www.smart-swimmingpool.com    │
-└──────────────────────────────────┘
+```svgbob
+.----------------------------------.
+| Pool Temperature    25.3 °C      |
+| Solar Temperature   55.1 °C      |
+|                                  |
+| Pump Pool           ON           |
+| Solar Pump          ON           |
+| Mode                auto         |
+|                                  |
+|         14:30                    |
+|    www.smart-swimmingpool.com    |
+'----------------------------------'
 ```
 
 - **Temperatures** are updated whenever new MQTT data arrives.
