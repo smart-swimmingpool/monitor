@@ -215,15 +215,15 @@ locations.
 The simplest and safest method — uses the **built-in TP4056 charger** of the
 TTGO T5.
 
-```text
-  Solar Panel          TTGO T5 V231
-  (5-6V)                  ┌────────┐
-     │                    │ USB-C  │
-     ├─[USB-C Breakout]───┤  Port  │
-     │                    │        │
-  Li‑Po Battery           │  JST   │
-  (3.7V, 1000mAh) ────────┤  BAT   │
-                           └────────┘
+```svgbob
+ .-------------.   .-----------------.   .---------------------.   .-------------.
+ | Solar panel |   |  USB-C breakout |   |     TTGO T5 V231    |   |   Battery   |
+ |   5 to 6V   |   |                 |   |     USB-C + JST     |   |  3.7V Li-Po |
+ |             |   |                 |   |                     |   |             |
+ |        + o--+---+--o VBUS   5V o--+---+--o USB 5V   BAT+ o--+---+--o +        |
+ |             |   |                 |   |                     |   |             |
+ |        - o--+---+--o GND   GND o--+---+--o GND      BAT- o--+---+--o -        |
+ '-------------'   '-----------------'   '---------------------'   '-------------'
 ```
 
 1. **Solar panel** (5–6 V) — solder to a USB‑C breakout board or directly to
@@ -240,16 +240,18 @@ requires at least ~4.5 V to start charging.
 Uses a dedicated solar charger module (e.g. **CN3065** or **TP4056 with solar
 input**) for better energy harvesting in low light.
 
-```text
-  Solar Panel        Solar Charger        TTGO T5 V231
-  (5-6V)             Module               ┌────────┐
-     │                  │                  │ USB-C  │
-     ├──────────────────┤ IN+         OUT+─┤  Port  │
-     │                  │                  │        │
-                         │ BAT+  ────────   │  JST   │
-  Li‑Po Battery ────────┤ BAT-      ──────┤  BAT   │
-                         │                  └────────┘
+```svgbob
+ .-------------.   .-----------------.   .---------------------.   .-------------.
+ | Solar panel |   |  Solar charger  |   |     TTGO T5 V231    |   |   Battery   |
+ |   5 to 6V   |   |      CN3065     |   |       JST BAT       |   |  3.7V Li-Po |
+ |             |   |                 |   |                     |   |             |
+ |        + o--+---+--o IN+  BAT+ o--+---+--o BAT+     BAT+ o--+---+--o +        |
+ |             |   |                 |   |                     |   |             |
+ |        - o--+---+--o IN-  BAT- o--+---+--o BAT-     BAT- o--+---+--o -        |
+ '-------------'   '-----------------'   '---------------------'   '-------------'
 ```
+
+The charger BAT terminals, the TTGO JST BAT connector and the battery are connected in parallel.
 
 1. Connect solar panel to the **IN+ / IN−** terminals of the charger module.
 2. Connect Li‑Po battery to **BAT+ / BAT−** of the charger.

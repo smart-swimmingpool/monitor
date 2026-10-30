@@ -213,15 +213,15 @@ Solarzelle an den meisten Standorten deckbar.
 Die einfachste und sicherste Methode – nutzt den **eingebauten TP4056 Lader**
 des TTGO T5.
 
-```text
-  Solarpanel          TTGO T5 V231
-  (5-6V)                  ┌────────┐
-     │                    │ USB-C  │
-     ├─[USB-C Breakout]───┤  Port  │
-     │                    │        │
-  Li‑Po Akku              │  JST   │
-  (3.7V, 1000mAh) ────────┤  BAT   │
-                           └────────┘
+```svgbob
+ .-------------.   .-----------------.   .---------------------.   .-------------.
+ |  Solarpanel |   |  USB-C-Breakout |   |     TTGO T5 V231    |   |     Akku    |
+ |   5 bis 6V  |   |                 |   |     USB-C + JST     |   |  3.7V Li-Po |
+ |             |   |                 |   |                     |   |             |
+ |        + o--+---+--o VBUS   5V o--+---+--o USB 5V   BAT+ o--+---+--o +        |
+ |             |   |                 |   |                     |   |             |
+ |        - o--+---+--o GND   GND o--+---+--o GND      BAT- o--+---+--o -        |
+ '-------------'   '-----------------'   '---------------------'   '-------------'
 ```
 
 1. **Solarpanel** (5–6 V) an ein USB‑C Breakout‑Board oder direkt an einen
@@ -237,16 +237,18 @@ benötigt mindestens ~4,5 V zum Starten des Ladevorgangs.
 Verwendet ein separates Solarlader-Modul (z. B. **CN3065** oder **TP4056 mit
 Solar-Eingang**) für bessere Energieausbeute bei schwachem Licht.
 
-```text
-  Solarpanel          Solarlader           TTGO T5 V231
-  (5-6V)              Modul                ┌────────┐
-     │                  │                  │ USB-C  │
-     ├──────────────────┤ IN+         OUT+─┤  Port  │
-     │                  │                  │        │
-                         │ BAT+  ────────   │  JST   │
-  Li‑Po Akku ───────────┤ BAT-      ──────┤  BAT   │
-                         │                  └────────┘
+```svgbob
+ .-------------.   .-----------------.   .---------------------.   .-------------.
+ |  Solarpanel |   |    Solarlader   |   |     TTGO T5 V231    |   |     Akku    |
+ |   5 bis 6V  |   |      CN3065     |   |       JST BAT       |   |  3.7V Li-Po |
+ |             |   |                 |   |                     |   |             |
+ |        + o--+---+--o IN+  BAT+ o--+---+--o BAT+     BAT+ o--+---+--o +        |
+ |             |   |                 |   |                     |   |             |
+ |        - o--+---+--o IN-  BAT- o--+---+--o BAT-     BAT- o--+---+--o -        |
+ '-------------'   '-----------------'   '---------------------'   '-------------'
 ```
+
+Die BAT-Anschlüsse des Laders, der JST-BAT-Anschluss des TTGO und der Akku sind parallel verbunden.
 
 1. Solarpanel an den **IN+ / IN−** Anschluss des Ladereglers.
 2. Li‑Po‑Akku an **BAT+ / BAT−** des Ladereglers.
